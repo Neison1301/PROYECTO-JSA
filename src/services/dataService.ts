@@ -131,12 +131,12 @@ class DataService {
     console.log("🚀 Inicializando datos por defecto...");
 
     // Crear usuario admin por defecto si no existen usuarios
-    const users = this.getUsers();
-    if (users.length === 0) {
+    let users = this.getUsers();
+    if (users.length === 0 || !users.find((u) => u.username === "admin")) {
       const adminUser: User = {
-        id: "admin-001",
+        id: "user-admin-001",
         username: "admin",
-        email: "admin@example.com",
+        email: "admin@tiendaperu.com",
         password: "admin123", // En producción, esto debería estar hasheado
         role: "admin",
         createdAt: new Date(),
@@ -146,18 +146,21 @@ class DataService {
       console.log("👤 Usuario admin por defecto creado");
     }
 
-    // 2. Crear el usuario Recepcionista
-    const receptionistUser: User = {
-      id: "receptionist-001",
-      username: "recepcionista",
-      email: "recepcionista@example.com",
-      password: "recepcionista123", // En producción, esto DEBE estar hasheado
-      role: "recepcionista",
-      createdAt: new Date(),
-      isActive: true,
-    };
-    this.saveUser(receptionistUser);
-    console.log("🧑‍💼 Usuario recepcionista por defecto creado");
+    // Crear el usuario Recepcionista
+    users = this.getUsers(); // Volver a obtener usuarios para incluir el admin recién creado
+    if (!users.find((u) => u.username === "recepcionista")) {
+      const receptionistUser: User = {
+        id: "user-recep-001",
+        username: "recepcionista",
+        email: "recepcionista@tiendaperu.com",
+        password: "recepcionista123", // En producción, esto DEBE estar hasheado
+        role: "recepcionista",
+        createdAt: new Date(),
+        isActive: true,
+      };
+      this.saveUser(receptionistUser);
+      console.log("🧑‍💼 Usuario recepcionista por defecto creado");
+    }
 
     // Crear productos de ejemplo si no existen
     const products = this.getProducts();
@@ -165,36 +168,52 @@ class DataService {
       const sampleProducts: Product[] = [
         {
           id: "prod-001",
-          name: "Laptop Dell Inspiron",
-          description: "Laptop Dell Inspiron 15 con procesador Intel i5",
-          price: 899.99,
+          name: "Laptop Lenovo IdeaPad 3",
+          description:
+            "Laptop Lenovo IdeaPad con procesador Intel i3, ideal para estudiantes.",
+          price: 1599.0,
           stock: 10,
-          category: "Electrónicos",
-          sku: "DELL-INS-001",
+          category: "Electrónica",
+          sku: "LEN-IDP-001",
           createdAt: new Date(),
           updatedAt: new Date(),
           isActive: true,
         },
         {
           id: "prod-002",
-          name: "Mouse Inalámbrico",
-          description: "Mouse inalámbrico ergonómico con 3 botones",
-          price: 29.99,
+          name: "Audífonos Bluetooth Xiaomi",
+          description:
+            "Audífonos inalámbricos Xiaomi Redmi Buds 3 Lite, con estuche de carga.",
+          price: 89.9,
           stock: 50,
-          category: "Accesorios",
-          sku: "MOUSE-WL-001",
+          category: "Audio",
+          sku: "AUD-XIAO-001",
           createdAt: new Date(),
           updatedAt: new Date(),
           isActive: true,
         },
         {
           id: "prod-003",
-          name: "Teclado Mecánico",
-          description: "Teclado mecánico RGB con switches azules",
-          price: 129.99,
+          name: "Monitor Samsung 24 pulgadas",
+          description:
+            "Monitor Samsung Full HD, ideal para trabajo de oficina y entretenimiento.",
+          price: 549.0,
           stock: 25,
-          category: "Accesorios",
-          sku: "KEYB-MECH-001",
+          category: "Electrónica",
+          sku: "MON-SAM-001",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isActive: true,
+        },
+        {
+          id: "prod-004",
+          name: "Impresora Epson EcoTank L3250",
+          description:
+            "Impresora multifuncional Epson EcoTank con sistema de tinta continua.",
+          price: 799.0,
+          stock: 15,
+          category: "Periféricos",
+          sku: "IMP-EPS-001",
           createdAt: new Date(),
           updatedAt: new Date(),
           isActive: true,
@@ -211,24 +230,36 @@ class DataService {
       const sampleClients: Client[] = [
         {
           id: "client-001",
-          name: "Juan Pérez",
-          email: "juan.perez@email.com",
-          phone: "+1234567890",
-          address: "Calle Principal 123",
-          city: "Ciudad de México",
-          taxId: "RFC123456789",
+          name: "Carlos Vargas",
+          email: "carlos.vargas@email.com",
+          phone: "987654321",
+          address: "Av. La Molina 123, La Molina",
+          city: "Lima",
+          taxId: "10745678901",
           createdAt: new Date(),
           updatedAt: new Date(),
           isActive: true,
         },
         {
           id: "client-002",
-          name: "María González",
-          email: "maria.gonzalez@email.com",
-          phone: "+1234567891",
-          address: "Avenida Secundaria 456",
-          city: "Guadalajara",
-          taxId: "RFC987654321",
+          name: "Ana Torres SAC",
+          email: "ventas@anatorres.com.pe",
+          phone: "991234567",
+          address: "Calle San Martín 456, Miraflores",
+          city: "Lima",
+          taxId: "20123456789",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isActive: true,
+        },
+        {
+          id: "client-003",
+          name: "Pedro Rojas",
+          email: "pedro.rojas@email.com",
+          phone: "955123456",
+          address: "Jr. Puno 789, Cercado de Arequipa",
+          city: "Arequipa",
+          taxId: "10987654321",
           createdAt: new Date(),
           updatedAt: new Date(),
           isActive: true,
@@ -238,15 +269,7 @@ class DataService {
       sampleClients.forEach((client) => this.saveClient(client));
       console.log("👥 Clientes de ejemplo creados");
     }
-
-    console.log("✅ Inicialización de datos por defecto completada");
-  }
-
-  // Método de depuración
-  debugStorage(): void {
-    console.log("🔍 Información de depuración del almacenamiento:");
-    console.log("Todos los datos almacenados:", storage.getAllData());
-  }
-}
+  } // <--- Esta es la llave de cierre correcta para initializeDefaultData()
+} // <--- Esta es la llave de cierre de la clase DataService
 
 export const dataService = new DataService();

@@ -28,13 +28,13 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
   const { openWindow } = useWindows();
 
   // Define los elementos del menú de la barra lateral.
-  const elementosMenu = [
-    { icono: Home, etiqueta: 'Dashboard', componente: 'dashboard' },
-    { icono: Package, etiqueta: 'Productos', componente: 'products' },
-    { icono: Users, etiqueta: 'Clientes', componente: 'clients' },
-    { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales' },
-    { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports' },
-    { icono: Settings, etiqueta: 'Configuración', componente: 'settings' }
+   const elementosMenu = [
+    { icono: Home, etiqueta: 'Dashboard', componente: 'dashboard', rolesPermitidos: ['admin', 'recepcionista'] },
+    { icono: Package, etiqueta: 'Productos', componente: 'products', rolesPermitidos: ['admin'] },
+    { icono: Users, etiqueta: 'Clientes', componente: 'clients', rolesPermitidos: ['admin', 'recepcionista'] },
+    { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales', rolesPermitidos: ['admin', 'recepcionista'] },
+    { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin'] }, // Solo Admin
+    { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'recepcionista'] } // Solo Admin
   ];
 
   // Maneja el clic en un elemento del menú.
@@ -61,7 +61,10 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
       </div>
 
       <nav className="sidebar-nav">
-        {elementosMenu.map((item) => (
+        {elementosMenu
+        //este es el filtro segun su rol, 
+        .filter(item => item.rolesPermitidos.includes(user?.role || ''))
+        .map((item) => (
           <div key={item.componente} className="nav-item">
             <button
               className="nav-link w-100 text-start border-0 bg-transparent"

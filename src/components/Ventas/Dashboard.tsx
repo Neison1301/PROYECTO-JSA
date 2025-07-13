@@ -91,6 +91,12 @@ const PanelPrincipal: React.FC = () => {
     }
   };
 
+
+// Helper para verificar si el usuario tiene un rol específico
+  const tieneRol = (roles: string[]) => {
+    return user?.role && roles.includes(user.role);
+  };
+
   return (
     <div className="fade-in">
       <div className="row mb-4">
@@ -198,13 +204,15 @@ const PanelPrincipal: React.FC = () => {
             </div>
             <div className="card-body">
               <div className="d-grid gap-2">
+                {/*se encarga de filtrar por rol  */}
+                {tieneRol(['admin']) && (
                 <button 
                   className="btn btn-outline-primary"
                   onClick={() => manejarAccionRapida('productos')}
                 >
                   <Package className="me-2" size={18} />
                   Agregar Producto
-                </button>
+                </button>)}
                 <button 
                   className="btn btn-outline-success"
                   onClick={() => manejarAccionRapida('clientes')}
@@ -227,13 +235,15 @@ const PanelPrincipal: React.FC = () => {
                   Ver Reportes
                 </button>
 {/**/}
+                {tieneRol(['admin']) && (
+
                 <button 
                   className="btn btn-outline-danger"
                   onClick={() => manejarAccionRapida('agregarRecepcionista')}
                 >
                   <ShoppingCart className="me-2" size={18} />
                   Agregar Recepcionista
-                </button>
+                </button>)}
               </div>
             </div>
           </div>

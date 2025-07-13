@@ -6,6 +6,8 @@ import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import WindowManager from './components/GestorVentanas';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+//faltaba esto 
+import 'bootstrap/dist/css/bootstrap.min.css'; 
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();

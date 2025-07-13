@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthState } from '../types';
 import { authService } from '../services/authService';
-
+import { storage } from '../services/almacenamiento'; 
 interface AuthContextType extends AuthState {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -40,6 +40,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     authService.logout();
+    storage.removeItem('currentUser'); 
+    storage.removeItem('windows'); 
     setAuthState({ isAuthenticated: false, user: null });
   };
 

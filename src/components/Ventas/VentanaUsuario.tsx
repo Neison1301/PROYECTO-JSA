@@ -122,6 +122,7 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({ onUserSaved, user
               name="username"
               value={datosFormulario.username}
               onChange={manejarCambioInput}
+              autoComplete="off"
             />
             {errores.username && <div className="invalid-feedback">{errores.username}</div>}
           </div>
@@ -134,6 +135,7 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({ onUserSaved, user
               name="email"
               value={datosFormulario.email}
               onChange={manejarCambioInput}
+              autoComplete="off"
             />
             {errores.email && <div className="invalid-feedback">{errores.email}</div>}
           </div>
@@ -146,6 +148,7 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({ onUserSaved, user
               name="password"
               value={datosFormulario.password}
               onChange={manejarCambioInput}
+              autoComplete="off"
             />
             {errores.password && <div className="invalid-feedback">{errores.password}</div>}
           </div>

@@ -62,15 +62,15 @@ const InicioSesion: React.FC = () => {
               type="text"
               className="form-control"
               id="nombreUsuario" // ID para el campo de nombre de usuario.
-              placeholder="Usuario"
               value={nombreUsuario}
+              placeholder="Usuario"
               onChange={(e) => setNombreUsuario(e.target.value)}
               required
             />
             <label htmlFor="nombreUsuario"> {/* Etiqueta asociada al ID del nombre de usuario. */}
               <User size={18} className="me-2" />
-              Usuario
-            </label>
+            </label>             
+
           </div>
 
           <div className="form-floating mb-4">
@@ -85,7 +85,6 @@ const InicioSesion: React.FC = () => {
             />
             <label htmlFor="contrasena"> {/* Etiqueta asociada al ID de la contraseña. */}
               <Lock size={18} className="me-2" />
-              Contraseña
             </label>
           </div>
 

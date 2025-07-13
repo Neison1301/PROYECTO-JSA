@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { dataService } from '../../services/dataService';
 import { Sale, SaleItem, Product, Client } from '../../types';
 import { generarId, formatearMoneda, formatearFecha  } from '../../utils';
-import { ShoppingCart, Plus, Edit, Trash2, Search, User, Package, Calendar, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Edit, Trash2, Search, User, Package, Calendar, DollarSign , FileText, FileSpreadsheet } from 'lucide-react';
+import { UtilidadesExportacion } from '../../utils/exportUtils';
 
 const SalesWindow: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -130,6 +131,25 @@ const SalesWindow: React.FC = () => {
     const tax = subtotal * 0.18; // 
     const total = subtotal + tax;
     return { subtotal, tax, total };
+  };
+
+
+   // NUEVA FUNCIÓN PARA MANEJAR LA EXPORTACIÓN DE VENTAS
+  const handleExportSales = (formato: 'excel' | 'pdf') => {
+    if (filteredSales.length === 0) {
+      alert('No hay ventas para exportar en la tabla actual. Aplica filtros si lo deseas.');
+      return;
+    }
+    try {
+      // Usamos 'filteredSales' para exportar solo lo que el usuario ve o ha filtrado
+      UtilidadesExportacion.exportarReporteVentas(filteredSales, formato);
+      // Opcional: Puedes añadir una notificación de éxito aquí
+      console.log(`Reporte de ventas exportado en formato ${formato}.`);
+    } catch (error) {
+      console.error('Error al exportar reporte de ventas:', error);
+      alert('Hubo un error al generar el reporte de ventas. Inténtalo de nuevo.');
+      // Opcional: Muestra un mensaje de error más amigable al usuario
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -412,13 +432,32 @@ const SalesWindow: React.FC = () => {
           <ShoppingCart className="me-2" />
           Gestión de Ventas
         </h4>
-        <button
-          className="btn btn-gradient"
-          onClick={() => setShowForm(true)}
-        >
-          <Plus size={18} className="me-2" />
-          Nueva Venta
-        </button>
+         <div className="d-flex align-items-center">
+            <button
+                className="btn btn-outline-success me-2"
+                onClick={() => handleExportSales('excel')}
+                title="Exportar ventas a Excel"
+            >
+                <FileSpreadsheet size={18} className="me-1" />
+                Excel
+            </button>
+            <button
+                className="btn btn-outline-danger me-3"
+                onClick={() => handleExportSales('pdf')}
+                title="Exportar ventas a PDF"
+            >
+                <FileText size={18} className="me-1" />
+                PDF
+            </button>
+            {/* Botón de "Nueva Venta" original */}
+            <button
+                className="btn btn-gradient"
+                onClick={() => setShowForm(true)}
+            >
+                <Plus size={18} className="me-2" />
+                Nueva Venta
+            </button>
+        </div>
       </div>
 
       <div className="row mb-4">

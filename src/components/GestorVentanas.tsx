@@ -40,8 +40,7 @@ const GestorVentanas: React.FC = () => {
         case "settings":
           return <SettingsWindow />;
         // --- ¡INICIO DE LA MODIFICACIÓN! ---
-        case "addUserForm": // Agrega este caso para 'addUserForm'
-          // Pasa las props necesarias a FormularioUsuario
+        case "addUserForm": 
           return (
             <FormularioUsuario
               onUserSaved={() => {}}
