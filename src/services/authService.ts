@@ -1,0 +1,102 @@
+import { User, AuthState } from '../types';
+import { dataService } from './dataService';
+import { storage } from './almacenamiento';
+
+class AuthService {
+  getCurrentUser(): User | null {
+    return storage.getItem<User>('currentUser');
+  }
+
+  login(username: string, password: string): AuthState {
+    const users = dataService.getUsers();
+    const user = users.find(u => 
+      (u.username === username || u.email === username) && 
+      u.password === password && 
+      u.isActive
+    );
+
+    if (user) {
+      storage.setItem('currentUser', user);
+      return { isAuthenticated: true, user };
+    }
+
+    return { isAuthenticated: false, user: null };
+  }
+
+  logout(): void {
+    storage.removeItem('currentUser');
+  }
+
+  isAuthenticated(): boolean {
+    return this.getCurrentUser() !== null;
+  }
+
+  getAuthState(): AuthState {
+    const user = this.getCurrentUser();
+    return {
+      isAuthenticated: user !== null,
+      user
+    };
+  }
+
+  updateProfile(userId: string, updates: Partial<User>): boolean {
+    try {
+      const users = dataService.getUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) return false;
+
+      // Check if email already exists for another user
+      if (updates.email) {
+        const emailExists = users.find(u => u.email === updates.email && u.id !== userId);
+        if (emailExists) return false;
+      }
+
+      // Check if username already exists for another user
+      if (updates.username) {
+        const usernameExists = users.find(u => u.username === updates.username && u.id !== userId);
+        if (usernameExists) return false;
+      }
+
+      // Update user
+      const updatedUser = { ...users[userIndex], ...updates };
+      users[userIndex] = updatedUser;
+      
+      // Save to storage
+      dataService.saveUser(updatedUser);
+      
+      // Update current user in session
+      storage.setItem('currentUser', updatedUser);
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return false;
+    }
+  }
+
+  changePassword(userId: string, currentPassword: string, newPassword: string): boolean {
+    try {
+      const users = dataService.getUsers();
+      const user = users.find(u => u.id === userId);
+      
+      if (!user || user.password !== currentPassword) {
+        return false;
+      }
+
+      // Update password
+      const updatedUser = { ...user, password: newPassword };
+      dataService.saveUser(updatedUser);
+      
+      // Update current user in session
+      storage.setItem('currentUser', updatedUser);
+      
+      return true;
+    } catch (error) {
+      console.error('Error changing password:', error);
+      return false;
+    }
+  }
+}
+
+export const authService = new AuthService();
