@@ -7,15 +7,10 @@ import { Users, Plus, Edit, Trash2, Search, Mail, Phone, MapPin } from 'lucide-r
 const VentanaClientes: React.FC = () => {
   // Estado para la lista de clientes
   const [clientes, setClientes] = useState<Client[]>([]);
-  // Estado para los clientes filtrados
   const [clientesFiltrados, setClientesFiltrados] = useState<Client[]>([]);
-  // Estado para mostrar u ocultar el formulario
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  // Estado para el cliente que se está editando
   const [clienteEditando, setClienteEditando] = useState<Client | null>(null);
-  // Estado para el término de búsqueda
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
-  // Estado para los datos del formulario
   const [datosFormulario, setDatosFormulario] = useState({
     nombre: '',
     correo: '',
@@ -24,7 +19,6 @@ const VentanaClientes: React.FC = () => {
     ciudad: '',
     idFiscal: ''
   });
-  // Estado para los errores de validación del formulario
   const [errores, setErrores] = useState<{[key: string]: string}>({});
 
   // Cargar clientes al iniciar el componente
@@ -36,16 +30,11 @@ const VentanaClientes: React.FC = () => {
   useEffect(() => {
     filtrarClientes();
   }, [clientes, terminoBusqueda]);
-
-  // Función para cargar clientes desde el servicio
   const cargarClientes = () => {
     const clientesCargados = dataService.getClients();
     setClientes(clientesCargados);
   };
-
-  // Función para filtrar la lista de clientes
   const filtrarClientes = () => {
-    // Si no hay término de búsqueda, mostrar todos los clientes
     if (!terminoBusqueda) {
       setClientesFiltrados(clientes);
       return;
@@ -79,47 +68,34 @@ const VentanaClientes: React.FC = () => {
   const validarFormulario = (): boolean => {
     const nuevosErrores: {[key: string]: string} = {};
 
-    // Validar que el nombre no esté vacío
     if (!validarRequerido(datosFormulario.nombre)) {
       nuevosErrores.nombre = 'El nombre es requerido';
     }
 
-    // Validar el correo electrónico
     if (!validarRequerido(datosFormulario.correo)) {
       nuevosErrores.correo = 'El correo es requerido';
     } else if (!validarEmail(datosFormulario.correo)) {
       nuevosErrores.correo = 'El correo no es válido';
     }
-
-    // Validar el teléfono
     if (!validarRequerido(datosFormulario.telefono)) {
       nuevosErrores.telefono = 'El teléfono es requerido';
     }
-
-    // Validar la dirección
     if (!validarRequerido(datosFormulario.direccion)) {
       nuevosErrores.direccion = 'La dirección es requerida';
     }
 
-    // Validar la ciudad
     if (!validarRequerido(datosFormulario.ciudad)) {
       nuevosErrores.ciudad = 'La ciudad es requerida';
     }
-
-    // Validar el ID fiscal
     if (!validarRequerido(datosFormulario.idFiscal)) {
       nuevosErrores.idFiscal = 'El DNI es requerido';
     }
-
-    // Verificar si el correo ya existe
     const correoExistente = clientes.find(c => 
       c.email === datosFormulario.correo && (!clienteEditando || c.id !== clienteEditando.id)
     );
     if (correoExistente) {
       nuevosErrores.correo = 'Este correo ya está registrado';
     }
-
-    // Verificar si el ID fiscal ya existe
     const idFiscalExistente = clientes.find(c => 
       c.taxId === datosFormulario.idFiscal && (!clienteEditando || c.id !== clienteEditando.id)
     );
@@ -148,7 +124,7 @@ const VentanaClientes: React.FC = () => {
       city: datosFormulario.ciudad,
       taxId: datosFormulario.idFiscal,
       createdAt: clienteEditando?.createdAt || new Date(), // Mantener fecha de creación o usar nueva
-      updatedAt: new Date(), // Actualizar fecha de modificación
+      updatedAt: new Date(), 
       isActive: true // El cliente siempre está activo por defecto
     };
 
@@ -182,12 +158,10 @@ const VentanaClientes: React.FC = () => {
     }
   };
 
-  // Función para manejar el cambio en los inputs del formulario
   const manejarCambioInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    // Actualizar el estado del formulario
     setDatosFormulario(prev => ({ ...prev, [name]: value }));
-    
+  
     // Limpiar error cuando el usuario comienza a escribir
     if (errores[name]) {
       setErrores(prev => ({ ...prev, [name]: '' }));

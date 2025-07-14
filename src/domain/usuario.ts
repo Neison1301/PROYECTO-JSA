@@ -1,27 +1,27 @@
-// src/domain/usuario.ts
-
 export interface IUserData {
   id: string;
   username: string;
   email: string;
-  password: string;
-  role: "admin" | "recepcionista";
-  createdAt: Date;
+  role: "admin" | "empleado";
+  createdAt: string | Date;
   isActive: boolean;
-  updatedAt?: Date;
+  updatedAt?: string | Date;
+  password: string;
 }
 
 export class User {
   public readonly id: string;
   private _username: string;
   private _email: string;
-  private _role: "admin" | "recepcionista";
+  private _role: "admin" | "empleado";
   public readonly createdAt: Date;
+  private _password: string;
   private _isActive: boolean;
   private _updatedAt?: Date;
 
   constructor(data: IUserData) {
-    if (!data.id || !data.username || !data.email || !data.role || !data.createdAt) {
+    // Validación básica
+    if (!data.id || !data.username || !data.email || !data.role || !data.createdAt || !data.password) {
       throw new Error("Datos de usuario inválidos: faltan campos esenciales.");
     }
 
@@ -32,36 +32,47 @@ export class User {
     this.createdAt = new Date(data.createdAt);
     this._isActive = data.isActive;
     this._updatedAt = data.updatedAt ? new Date(data.updatedAt) : undefined;
+    this._password = data.password;
   }
 
+  // Getters 
   public get username(): string {
     return this._username;
   }
+
   public get email(): string {
     return this._email;
   }
-  public get role(): "admin" | "recepcionista" {
+
+  public get role(): "admin" | "empleado" {
     return this._role;
   }
+
   public get isActive(): boolean {
     return this._isActive;
   }
+
   public get updatedAt(): Date | undefined {
     return this._updatedAt;
   }
 
+  public get password(): string {
+    return this._password;
+  }
+
+  // Métodos del dominio
   public isAdmin(): boolean {
     return this._role === "admin";
   }
 
-  public isRecepcionista(): boolean {
-    return this._role === "recepcionista";
+  public isEmpleado(): boolean {
+    return this._role === "empleado";
   }
 
-  public hasPermission(requiredRole: "admin" | "recepcionista"): boolean {
-    if (this.isAdmin()) {
-      return true;
-    }
+  public hasPermission(requiredRole: "admin" | "empleado"): boolean {
+    if (this.isAdmin()) return true;
     return this._role === requiredRole;
   }
+
+  
 }

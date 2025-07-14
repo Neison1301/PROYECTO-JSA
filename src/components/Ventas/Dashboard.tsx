@@ -6,11 +6,9 @@ import { Package, Users, ShoppingCart, TrendingUp, Calendar, Clock, UserPlus} fr
 import { formatearMoneda } from '../../utils';
 
 const PanelPrincipal: React.FC = () => {
-  // Obtener el usuario del contexto de autenticación
+  // Obtener el usuario autenticado
   const { user } = useAuth();
-  // Obtener la función para abrir ventanas del contexto de ventanas
   const { openWindow } = useWindows();
-  // Estado para las estadísticas del panel
   const [estadisticas, setEstadisticas] = useState({
     totalProductos: 0,
     totalClientes: 0,
@@ -20,26 +18,18 @@ const PanelPrincipal: React.FC = () => {
     ventasRecientes: 0
   });
 
-  // Efecto para cargar las estadísticas al montar el componente
   useEffect(() => {
     const cargarEstadisticas = () => {
       // Obtener datos de productos, clientes y ventas
       const productos = dataService.getProducts();
       const clientes = dataService.getClients();
       const ventas = dataService.getSales();
-
-      // Obtener la fecha actual y el inicio del mes actual
       const hoy = new Date();
       const esteMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       
-      // Calcular ventas recientes (este mes)
       const ventasEsteMes = ventas.filter(venta => new Date(venta.createdAt) >= esteMes);
-      // Calcular ingresos totales
       const ingresosAcumulados = ventas.reduce((suma, venta) => suma + venta.total, 0);
-      // Contar productos con stock bajo (menos de 10 unidades)
       const productosConPocoStock = productos.filter(producto => producto.stock < 10).length;
-
-      // Actualizar el estado de las estadísticas
       setEstadisticas({
         totalProductos: productos.length,
         totalClientes: clientes.length,
@@ -49,12 +39,9 @@ const PanelPrincipal: React.FC = () => {
         ventasRecientes: ventasEsteMes.length
       });
     };
-
     // Cargar las estadísticas al inicio
     cargarEstadisticas();
   }, []);
-
-  // Función para obtener la hora y fecha actuales formateadas
   const obtenerHoraActual = () => {
     //hor peru
     return new Date().toLocaleString('es-PE', {
@@ -82,17 +69,16 @@ const PanelPrincipal: React.FC = () => {
         break;
       case 'reportes':
         openWindow('Reportes', 'reports');
-        break;{/* Agregar Recepcionista */}
-      case 'agregarRecepcionista': 
-        openWindow('Nuevo Recepcionista', 'addUserForm'); 
+        break;{/* Agregar empleado */}
+      case 'agregarEmpleado': 
+        openWindow('Nuevo empleado', 'addUserForm'); 
         break;
       default:
         break;
     }
   };
 
-
-// Helper para verificar si el usuario tiene un rol específico
+//  para verificar si el usuario tiene un rol específico
   const tieneRol = (roles: string[]) => {
     return user?.role && roles.includes(user.role);
   };
@@ -242,10 +228,10 @@ const PanelPrincipal: React.FC = () => {
 
                 <button 
                   className="btn btn-outline-danger"
-                  onClick={() => manejarAccionRapida('agregarRecepcionista')}
+                  onClick={() => manejarAccionRapida('agregarEmpleado')}
                 >
                   <ShoppingCart className="me-2" size={18} />
-                  Agregar Recepcionista
+                  Agregar empleado
                 </button>)}
               </div>
             </div>

@@ -29,12 +29,12 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
 
   // Define los elementos del menú de la barra lateral.
    const elementosMenu = [
-    { icono: Home, etiqueta: 'Dashboard', componente: 'dashboard', rolesPermitidos: ['admin', 'recepcionista'] },
+    { icono: Home, etiqueta: 'Dashboard', componente: 'dashboard', rolesPermitidos: ['admin', 'empleado'] },
     { icono: Package, etiqueta: 'Productos', componente: 'products', rolesPermitidos: ['admin'] },
-    { icono: Users, etiqueta: 'Clientes', componente: 'clients', rolesPermitidos: ['admin', 'recepcionista'] },
-    { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales', rolesPermitidos: ['admin', 'recepcionista'] },
+    { icono: Users, etiqueta: 'Clientes', componente: 'clients', rolesPermitidos: ['admin', 'empleado'] },
+    { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales', rolesPermitidos: ['admin', 'empleado'] },
     { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin'] }, // Solo Admin
-    { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'recepcionista'] } // Solo Admin
+    { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'empleado'] } // Solo Admin
   ];
 
   // Maneja el clic en un elemento del menú.
