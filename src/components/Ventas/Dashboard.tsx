@@ -98,7 +98,7 @@ const PanelPrincipal: React.FC = () => {
   };
 
   return (
-    <div className="fade-in">
+    <div className="fade-in" >
       <div className="row mb-4">
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center">
@@ -117,6 +117,8 @@ const PanelPrincipal: React.FC = () => {
       </div>
 
       <div className="dashboard-cards">
+   {/* cards visibles para administraodres*/}
+       {tieneRol(['admin']) && (
         <div className="dashboard-card products">
           <div className="card-icon">
             <Package />
@@ -130,7 +132,7 @@ const PanelPrincipal: React.FC = () => {
               </span>
             )}
           </small>
-        </div>
+        </div>)}
 
         <div className="dashboard-card clients">
           <div className="card-icon">
@@ -173,10 +175,11 @@ const PanelPrincipal: React.FC = () => {
             </div>
             <div className="card-body">
               <div className="list-group list-group-flush">
+                 {tieneRol(['admin']) && (
                 <div className="list-group-item d-flex justify-content-between align-items-center">
                   <span>Productos activos</span>
                   <span className="badge bg-primary rounded-pill">{estadisticas.totalProductos}</span>
-                </div>
+                </div>)}    
                 <div className="list-group-item d-flex justify-content-between align-items-center">
                   <span>Clientes activos</span>
                   <span className="badge bg-success rounded-pill">{estadisticas.totalClientes}</span>

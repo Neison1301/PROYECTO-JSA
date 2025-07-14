@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { CellHookData } from 'jspdf-autotable'; 
 import { Product, Client, Sale } from '../types';
 import { formatearMoneda, formatearFecha } from './index';
 
@@ -289,4 +290,134 @@ export class UtilidadesExportacion {
 
     console.log(`✅ Reporte completo exportado: ${nombreArchivo}`);
   }
+
+
+
+
+  // NUEVO MÉTODO: Generar Boleta de Venta en PDF
+  static generarBoletaVentaPDF(sale: Sale, products: Product[], client: Client): void {
+    try {
+      const doc = new jsPDF();
+
+      const primaryColor: [number, number, number] = [40, 40, 40];
+      const accentColor: [number, number, number] = [102, 126, 234]; 
+      const headerBg: [number, number, number] = [240, 240, 240]; 
+
+        const whiteColor: number = 255;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.text('BOLETA DE VENTA', 105, 20, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('TechNova S.A.C.', 14, 30);
+      doc.text('RUC: 20548948992', 14, 35);
+      doc.text('Dirección: CAL. NAVARRA URB. HIGUERETA NRO. 178 , SANTIAGO DE SURCO, LIMA', 14, 40);
+      doc.text('Teléfono: (01) 123-4567 | Email: TechNova@gmail.com', 14, 45);
+
+      doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.setLineWidth(0.3);
+      doc.line(14, 50, 196, 50);
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Boleta N°: ${sale.id.slice(0, 8).toUpperCase()}`, 14, 60);
+      doc.text(`Fecha: ${formatearFecha(sale.createdAt)}`, 14, 66);
+      doc.text(`Estado: ${sale.status === 'completed' ? 'Completada' : 'Pendiente'}`, 14, 72);
+
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Cliente: ${client.name}`, 14, 80);
+      doc.text(`Email: ${client.email}`, 14, 86);
+      doc.text(`Teléfono: ${client.phone || 'N/A'}`, 14, 92);
+      
+      doc.line(14, 98, 196, 98);
+///estooooooooooooooooooooooooooo
+      const tableColumn = ["Descripción", "Cantidad", "P. Unit.", "Total"];
+      const tableRows: any[] = [];
+
+      sale.products.forEach(item => {
+          const productInfo = products.find(p => p.id === item.productId);
+          const description = productInfo ? productInfo.name : item.productName;
+          tableRows.push([
+              description,
+              item.quantity.toString(),
+              formatearMoneda(item.price),
+              formatearMoneda(item.total)
+          ]);
+      });
+
+      (doc as any).autoTable({
+          startY: 105,
+          head: [tableColumn],
+          body: tableRows,
+          theme: 'striped',
+          headStyles: {
+              fillColor: accentColor,
+              textColor: whiteColor,
+              fontStyle: 'bold',
+              fontSize: 10,
+              halign: 'center'
+          },
+          styles: {
+              fontSize: 9,
+              cellPadding: 3,
+              textColor: primaryColor,
+          },
+          columnStyles: {
+              0: { cellWidth: 80, halign: 'left' },
+              1: { cellWidth: 20, halign: 'center' },
+              2: { cellWidth: 30, halign: 'right' },
+              3: { cellWidth: 30, halign: 'right' }
+          },
+          foot: [
+              ['', '', 'Subtotal:', formatearMoneda(sale.subtotal)],
+              ['', '', 'IVA (18%):', formatearMoneda(sale.tax)],
+              ['', '', 'TOTAL A PAGAR:', formatearMoneda(sale.total)]
+          ],
+          footStyles: {
+              fontStyle: 'bold',
+              fillColor: headerBg,
+              halign: 'right',
+              fontSize: 10,
+              textColor: primaryColor
+          },
+          didParseCell: function (data: CellHookData) {
+            if (data.section === 'foot' && data.row.index === 2) {
+                data.cell.styles.fillColor = accentColor;
+                data.cell.styles.textColor = whiteColor;
+            }
+          }
+      });
+
+      if (sale.notes) {
+          const finalY = (doc as any).autoTable.previous.finalY;
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Notas:', 14, finalY + 10);
+          doc.setFont('helvetica', 'normal');
+          const splitNotes = doc.splitTextToSize(sale.notes, 180);
+          doc.text(splitNotes, 14, finalY + 15);
+      }
+      
+      const finalY = (doc as any).autoTable.previous.finalY;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.text('¡Gracias por su compra!', 105, finalY + 40, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('Esperamos verte de nuevo pronto.', 105, finalY + 46, { align: 'center' });
+
+      doc.save(`boleta_venta_${sale.id.slice(0, 8)}.pdf`);
+
+    } catch (error) {
+      throw new Error('Error al generar la boleta de venta');
+    }
+  }
 }
+
+

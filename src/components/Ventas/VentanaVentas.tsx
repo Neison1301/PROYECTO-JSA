@@ -134,7 +134,7 @@ const SalesWindow: React.FC = () => {
   };
 
 
-   // NUEVA FUNCIÓN PARA MANEJAR LA EXPORTACIÓN DE VENTAS
+   //  MANEJAR LA EXPORTACIÓN DE VENTAS
   const handleExportSales = (formato: 'excel' | 'pdf') => {
     if (filteredSales.length === 0) {
       alert('No hay ventas para exportar en la tabla actual. Aplica filtros si lo deseas.');
@@ -143,12 +143,9 @@ const SalesWindow: React.FC = () => {
     try {
       // Usamos 'filteredSales' para exportar solo lo que el usuario ve o ha filtrado
       UtilidadesExportacion.exportarReporteVentas(filteredSales, formato);
-      // Opcional: Puedes añadir una notificación de éxito aquí
       console.log(`Reporte de ventas exportado en formato ${formato}.`);
     } catch (error) {
       console.error('Error al exportar reporte de ventas:', error);
-      alert('Hubo un error al generar el reporte de ventas. Inténtalo de nuevo.');
-      // Opcional: Muestra un mensaje de error más amigable al usuario
     }
   };
 
@@ -188,7 +185,17 @@ const SalesWindow: React.FC = () => {
         dataService.saveProduct(updatedProduct);
       }
     });
-
+        // ***** NUEVO CÓDIGO AQUÍ: Generar la boleta de venta *****
+        try {
+            // Asegúrate de pasar la `saleData` completa, los `products` y el `client`
+            // para que la boleta tenga toda la información necesaria.
+            UtilidadesExportacion.generarBoletaVentaPDF(saleData, products, client);
+            alert('Venta completada y boleta generada exitosamente!');
+        } catch (error) {
+            console.error('Error al generar la boleta de venta:', error);
+            alert('Venta completada, pero hubo un error al generar la boleta. Revisa la consola.');
+        }
+        // *********************************************************
     dataService.saveSale(saleData);
     loadData(); // Recargar datos para mantener el orden correcto
     setShowForm(false);

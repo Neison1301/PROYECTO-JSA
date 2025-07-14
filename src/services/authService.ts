@@ -1,27 +1,31 @@
-import { User, AuthState } from '../types';
+import {  AuthState } from '../types';
 import { dataService } from './dataService';
 import { storage } from './almacenamiento';
+import { IUserData, User } from '../domain/usuario'; 
 
 class AuthService {
-  getCurrentUser(): User | null {
-    return storage.getItem<User>('currentUser');
+  getCurrentUser(): IUserData | null {
+    return storage.getItem<IUserData>('currentUser');
   }
 
   login(username: string, password: string): AuthState {
-    const users = dataService.getUsers();
-    const user = users.find(u => 
-      (u.username === username || u.email === username) && 
-      u.password === password && 
-      u.isActive
-    );
+        const users = dataService.getUsers();
+        const user = users.find(u =>
+            (u.username === username || u.email === username) &&
+            u.password === password &&
+            u.isActive
+        );
 
-    if (user) {
-      storage.setItem('currentUser', user);
-      return { isAuthenticated: true, user };
+        if (user) {
+             storage.setItem('currentUser', user);
+             const domainUser = new User(user);
+            return { isAuthenticated: true, user: domainUser };
+        }
+
+        // Si no se encuentra el usuario, retorna un estado de no autenticado.
+        return { isAuthenticated: false, user: null };
     }
 
-    return { isAuthenticated: false, user: null };
-  }
 
   logout(): void {
     storage.removeItem('currentUser');
@@ -32,14 +36,25 @@ class AuthService {
   }
 
   getAuthState(): AuthState {
-    const user = this.getCurrentUser();
-    return {
-      isAuthenticated: user !== null,
-      user
-    };
+    const userRaw = this.getCurrentUser(); // Esto devuelve IUserData (con Date objects si localStorage lo maneja)
+        if (userRaw) {
+            try {
+                // Crea una instancia de la CLASE `User` a partir de `userRaw` (IUserData)
+                const domainUser = new User(userRaw);
+                return {
+                    isAuthenticated: true,
+                    user: domainUser // Pasa la instancia de la CLASE User
+                };
+            } catch (error) {
+                console.error("Error al crear la instancia de User desde los datos almacenados:", error);
+                this.logout(); // Limpia la sesión si los datos están corruptos
+                return { isAuthenticated: false, user: null };
+            }
+        }
+        return { isAuthenticated: false, user: null };
   }
 
-  updateProfile(userId: string, updates: Partial<User>): boolean {
+  updateProfile(userId: string, updates: Partial<IUserData>): boolean {
     try {
       const users = dataService.getUsers();
       const userIndex = users.findIndex(u => u.id === userId);
@@ -100,3 +115,4 @@ class AuthService {
 }
 
 export const authService = new AuthService();
+

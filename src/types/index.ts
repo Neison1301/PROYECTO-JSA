@@ -1,13 +1,6 @@
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  role: 'admin' | 'user'| 'recepcionista';
-  createdAt: Date;
-  isActive: boolean;
-  updatedAt?: Date; 
-}
+
+import { User } from '../domain/usuario';
+
 
 export interface Product {
   id: string;

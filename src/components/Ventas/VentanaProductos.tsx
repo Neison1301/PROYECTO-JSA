@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../../services/dataService';
 import { Product } from '../../types';
-import { generarId, formatearMoneda, formatearFecha, validarRequerido, validarNumero } from '../../utils';import { Package, Plus, Edit, Trash2, Search, AlertTriangle } from 'lucide-react';
+import { generarId, formatearMoneda, formatearFecha, validarRequerido, validarNumero } from '../../utils';
+import { Package, Plus, Edit, Trash2, Search, AlertTriangle, FileText, FileSpreadsheet  } from 'lucide-react';
+import { UtilidadesExportacion } from '../../utils/exportUtils';
 
 const VentanaProductos: React.FC = () => {
   // Estado para la lista completa de productos
@@ -183,6 +185,28 @@ const VentanaProductos: React.FC = () => {
     }
   };
 
+
+  // === Nuevas funciones para exportar productos ===
+  const handleExportarExcel = () => {
+    try {
+      // Exportar los productos filtrados a Excel
+      UtilidadesExportacion.exportarReporteProductos(productosFiltrados, 'excel');
+    } catch (error) {
+      console.error('Error al exportar productos a Excel:', error);
+      alert('Hubo un error al exportar el reporte a Excel.');
+    }
+  };
+
+  const handleExportarPDF = () => {
+    try {
+      // Exportar los productos filtrados a PDF
+      UtilidadesExportacion.exportarReporteProductos(productosFiltrados, 'pdf');
+    } catch (error) {
+      console.error('Error al exportar productos a PDF:', error);
+      alert('Hubo un error al exportar el reporte a PDF.');
+    }
+  };
+
   // Renderizado condicional: si mostrarFormulario es true, mostrar el formulario
   if (mostrarFormulario) {
     return (
@@ -336,14 +360,34 @@ const VentanaProductos: React.FC = () => {
         <h4>
           <Package className="me-2" />
           Gestión de Productos
-        </h4>
-        <button
-          className="btn btn-gradient"
-          onClick={() => setMostrarFormulario(true)} // Mostrar formulario al hacer clic
-        >
-          <Plus size={18} className="me-2" />
-          Nuevo Producto
-        </button>
+        </h4> <div className="d-flex gap-2">
+          {/* Botones de Exportación */}
+          <button
+            className="btn btn-outline-success"
+            onClick={handleExportarExcel}
+            disabled={productosFiltrados.length === 0} // Deshabilitar si no hay productos para exportar
+            title="Exportar a Excel"
+          >
+            <FileSpreadsheet size={18} className="me-2" />
+            Excel
+          </button>
+          <button
+            className="btn btn-outline-danger"
+            onClick={handleExportarPDF}
+            disabled={productosFiltrados.length === 0} // Deshabilitar si no hay productos para exportar
+            title="Exportar a PDF"
+          >
+            <FileText size={18} className="me-2" />
+            PDF
+          </button>
+          <button
+            className="btn btn-gradient"
+            onClick={() => setMostrarFormulario(true)} // Mostrar formulario al hacer clic
+          >
+            <Plus size={18} className="me-2" />
+            Nuevo Producto
+          </button>
+        </div>
       </div>
 
       <div className="row mb-4">

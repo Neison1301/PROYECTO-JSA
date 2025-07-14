@@ -1,8 +1,6 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
 
 :root {
   --primary-color: #0d6efd;
@@ -23,6 +21,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8f9fa;
+    height: 100vh;
+
 }
 
 .app-container {
@@ -365,3 +365,7 @@ body {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
