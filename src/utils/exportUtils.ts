@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { CellHookData } from 'jspdf-autotable'; 
-import { Product, Client, Sale } from '../types';
+import { Product, Client, Venta } from '../types';
 import { formatearMoneda, formatearFecha } from './index';
 
 // Extiende el tipo jsPDF para incluir autoTable
@@ -151,7 +151,7 @@ export class UtilidadesExportacion {
   }
 
   // Exporta el reporte de ventas.
-  static exportarReporteVentas(ventas: Sale[], formato: 'excel' | 'pdf'): void {
+  static exportarReporteVentas(ventas: Venta[], formato: 'excel' | 'pdf'): void {
     // Mapea las ventas a un formato para el reporte.
     const datos = ventas.map(venta => ({
       id: venta.id,
@@ -160,8 +160,8 @@ export class UtilidadesExportacion {
       subtotal: venta.subtotal,
       impuestos: venta.tax,
       total: venta.total,
-      estado: venta.status === 'completed' ? 'Completada' :
-        venta.status === 'pending' ? 'Pendiente' : 'Cancelada',
+      estado: venta.status === 'Completada' ? 'Completada' :
+        venta.status === 'Pendiente' ? 'Pendiente' : 'Cancelada',
       fecha: formatearFecha(venta.createdAt),
     }));
 
@@ -185,7 +185,7 @@ export class UtilidadesExportacion {
   static exportarReporteCompleto(
     productos: Product[],
     clientes: Client[],
-    ventas: Sale[],
+    ventas: Venta[],
     formato: 'excel' | 'pdf'
   ): void {
     // Define el nombre del archivo.
@@ -230,8 +230,8 @@ export class UtilidadesExportacion {
         Subtotal: s.subtotal,
         Impuestos: s.tax,
         Total: s.total,
-        Estado: s.status === 'completed' ? 'Completada' :
-          s.status === 'pending' ? 'Pendiente' : 'Cancelada',
+        Estado: s.status === 'Completada' ? 'Completada' :
+          s.status === 'Pendiente' ? 'Pendiente' : 'Cancelada',
         Fecha: formatearFecha(s.createdAt),
       }));
       const hojaVentas = XLSX.utils.json_to_sheet(datosVentas);
@@ -295,7 +295,7 @@ export class UtilidadesExportacion {
 
 
   // NUEVO MÉTODO: Generar Boleta de Venta en PDF
-  static generarBoletaVentaPDF(sale: Sale, products: Product[], client: Client): void {
+  static generarBoletaVentaPDF(sale: Venta, products: Product[], client: Client): void {
     try {
       const doc = new jsPDF();
 
@@ -326,7 +326,7 @@ export class UtilidadesExportacion {
       doc.setFont('helvetica', 'bold');
       doc.text(`Boleta N°: ${sale.id.slice(0, 8).toUpperCase()}`, 14, 60);
       doc.text(`Fecha: ${formatearFecha(sale.createdAt)}`, 14, 66);
-      doc.text(`Estado: ${sale.status === 'completed' ? 'Completada' : 'Pendiente'}`, 14, 72);
+      doc.text(`Estado: ${sale.status === 'Completada' ? 'Completada' : 'Pendiente'}`, 14, 72);
 
       doc.setFont('helvetica', 'normal');
       doc.text(`Cliente: ${client.name}`, 14, 80);

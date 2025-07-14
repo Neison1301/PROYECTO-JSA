@@ -1,9 +1,9 @@
 class StorageService {
-  private prefix = 'bms_'; // Prefijo para las claves en localStorage, evita colisiones
+  private prefix = 'bms_'; // Prefijo para las claves en localStorage
 
   setItem<T>(key: string, value: T): void {
     try {
-      // Serializa el valor a JSON, manejando objetos Date para guardarlos correctamente
+      // manejando objetos Date para guardarlos correctamente
       const serializedValue = JSON.stringify(value, (key, val) => {
         // Convierte objetos Date a formato ISO string
         if (val instanceof Date) {
@@ -23,7 +23,7 @@ class StorageService {
       const item = localStorage.getItem(this.prefix + key); // Obtiene el ítem de localStorage
       if (!item) {
         console.log(`⚠️ No se encontraron datos para la clave: ${this.prefix + key}`);
-        return null; // Retorna null si no hay ítem
+        return null; 
       }
       
       // Parsea el JSON, manejando cadenas de fecha para convertirlas de nuevo a objetos Date
@@ -36,10 +36,10 @@ class StorageService {
       });
       
       console.log(`✅ Recuperado de localStorage: ${this.prefix + key}`, parsed);
-      return parsed; // Retorna el valor parseado
+      return parsed;
     } catch (error) {
       console.error('❌ Error al leer de localStorage:', error);
-      return null; // Retorna null en caso de error
+      return null; 
     }
   }
 
@@ -51,7 +51,7 @@ class StorageService {
   clear(): void {
     const keys = Object.keys(localStorage); // Obtiene todas las claves en localStorage
     keys.forEach(key => {
-      if (key.startsWith(this.prefix)) { // Solo limpia las claves con el prefijo de la app
+      if (key.startsWith(this.prefix)) { 
         localStorage.removeItem(key);
         console.log(`🗑️ Limpiado: ${key}`);
       }
@@ -63,14 +63,14 @@ class StorageService {
     const keys = Object.keys(localStorage); // Obtiene todas las claves
     
     keys.forEach(key => {
-      if (key.startsWith(this.prefix)) { // Filtra por el prefijo de la aplicación
-        const cleanKey = key.replace(this.prefix, ''); // Elimina el prefijo para la clave de retorno
+      if (key.startsWith(this.prefix)) { 
+        const cleanKey = key.replace(this.prefix, '');
         data[cleanKey] = this.getItem(cleanKey); // Recupera y almacena el valor
       }
     });
     
-    return data; // Retorna todos los datos relacionados con la aplicación
+    return data; 
   }
 }
 
-export const storage = new StorageService(); // Exporta una instancia del servicio de almacenamiento
+export const storage = new StorageService();

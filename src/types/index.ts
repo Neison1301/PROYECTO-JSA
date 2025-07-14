@@ -28,7 +28,7 @@ export interface Client {
   isActive: boolean;
 }
 
-export interface Sale {
+export interface Venta {
   id: string;
   clientId: string;
   clientName: string;
@@ -36,7 +36,7 @@ export interface Sale {
   total: number;
   tax: number;
   subtotal: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'Pendiente' | 'Completada' | 'Cancelada';
   createdAt: Date;
   updatedAt: Date;
   notes?: string;

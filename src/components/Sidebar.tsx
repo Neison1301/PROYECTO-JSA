@@ -16,7 +16,6 @@ import {
 interface PropiedadesBarraLateral {
   // Indica si la barra lateral está colapsada.
   estaColapsada: boolean;
-  // Función para alternar el estado de colapso.
   alAlternar: () => void;
 }
 
@@ -33,8 +32,8 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
     { icono: Package, etiqueta: 'Productos', componente: 'products', rolesPermitidos: ['admin'] },
     { icono: Users, etiqueta: 'Clientes', componente: 'clients', rolesPermitidos: ['admin', 'empleado'] },
     { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales', rolesPermitidos: ['admin', 'empleado'] },
-    { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin'] }, // Solo Admin
-    { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'empleado'] } // Solo Admin
+    { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin'] }, 
+    { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'empleado'] }
   ];
 
   // Maneja el clic en un elemento del menú.
@@ -42,13 +41,12 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
     openWindow(etiqueta, componente);
   };
 
-  // Renderiza la barra lateral.
   return (
     <div className={`sidebar ${estaColapsada ? 'sidebar-collapsed' : ''}`}>
       <div className="sidebar-header">
         <button
           className="btn btn-lin text-white p-0"
-          onClick={alAlternar} // Botón para alternar el colapso de la barra lateral.
+          onClick={alAlternar} 
         >
           <Menu size={24} />
         </button>

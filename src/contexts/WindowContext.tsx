@@ -27,7 +27,6 @@ interface WindowProviderProps {
   children: ReactNode;
 }
 
-// Nuevo hook personalizado para funciones con throttling
 // Este hook encapsula su propio useRef y useCallback.
 const useThrottledCallback = (callback: Function, delay: number) => {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,9 +45,8 @@ const useThrottledCallback = (callback: Function, delay: number) => {
         lastThisRef.current = null;
       }, delay);
     }
-  }, [callback, delay]); // Dependencias: la función original y el retraso
+  }, [callback, delay]); 
 
-  // Limpiar el timeout al desmontar el componente (o cuando el hook se limpia)
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {

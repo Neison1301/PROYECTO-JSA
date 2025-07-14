@@ -47,7 +47,7 @@ class AuthService {
                 };
             } catch (error) {
                 console.error("Error al crear la instancia de User desde los datos almacenados:", error);
-                this.logout(); // Limpia la sesión si los datos están corruptos
+                this.logout(); // Limpia la sesión
                 return { isAuthenticated: false, user: null };
             }
         }
@@ -61,26 +61,21 @@ class AuthService {
       
       if (userIndex === -1) return false;
 
-      // Check if email already exists for another user
       if (updates.email) {
         const emailExists = users.find(u => u.email === updates.email && u.id !== userId);
         if (emailExists) return false;
       }
 
-      // Check if username already exists for another user
       if (updates.username) {
         const usernameExists = users.find(u => u.username === updates.username && u.id !== userId);
         if (usernameExists) return false;
       }
 
-      // Update user
       const updatedUser = { ...users[userIndex], ...updates };
       users[userIndex] = updatedUser;
       
-      // Save to storage
       dataService.saveUser(updatedUser);
       
-      // Update current user in session
       storage.setItem('currentUser', updatedUser);
       
       return true;
@@ -99,11 +94,9 @@ class AuthService {
         return false;
       }
 
-      // Update password
       const updatedUser = { ...user, password: newPassword };
       dataService.saveUser(updatedUser);
       
-      // Update current user in session
       storage.setItem('currentUser', updatedUser);
       
       return true;

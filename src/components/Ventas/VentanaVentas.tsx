@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../../services/dataService';
-import { Sale, SaleItem, Product, Client } from '../../types';
+import { Venta, SaleItem, Product, Client } from '../../types';
 import { generarId, formatearMoneda, formatearFecha  } from '../../utils';
 import { ShoppingCart, Plus, Edit, Trash2, Search, User, Package, Calendar, DollarSign , FileText, FileSpreadsheet } from 'lucide-react';
 import { UtilidadesExportacion } from '../../utils/exportUtils';
 
 const SalesWindow: React.FC = () => {
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [filteredSales, setFilteredSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<Venta[]>([]);
+  const [filteredSales, setFilteredSales] = useState<Venta[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -159,7 +159,7 @@ const SalesWindow: React.FC = () => {
 
     const { subtotal, tax, total } = calculateTotals();
 
-    const saleData: Sale = {
+    const saleData: Venta = {
       id: generarId(),
       clientId: formData.clientId,
       clientName: client.name,
@@ -167,7 +167,7 @@ const SalesWindow: React.FC = () => {
       subtotal,
       tax,
       total,
-      status: 'completed',
+      status: 'Completada',
       createdAt: new Date(),
       updatedAt: new Date(),
       notes: formData.notes
@@ -202,7 +202,7 @@ const SalesWindow: React.FC = () => {
     resetForm();
   };
 
-  const handleDelete = (sale: Sale) => {
+  const handleDelete = (sale: Venta) => {
     if (window.confirm(`¿Estás seguro de eliminar la venta #${sale.id}?`)) {
       dataService.deleteSale(sale.id);
       loadData(); // Recargar datos para mantener el orden correcto
@@ -211,18 +211,18 @@ const SalesWindow: React.FC = () => {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-success';
-      case 'pending': return 'bg-warning';
-      case 'cancelled': return 'bg-danger';
+      case 'Completada': return 'bg-success';
+      case 'Pendiente': return 'bg-warning';
+      case 'Cancelada': return 'bg-danger';
       default: return 'bg-secondary';
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'completed': return 'Completada';
-      case 'pending': return 'Pendiente';
-      case 'cancelled': return 'Cancelada';
+      case 'Completada': return 'Completada';
+      case 'Pendiente': return 'Pendiente';
+      case 'Cancelada': return 'Cancelada';
       default: return status;
     }
   };

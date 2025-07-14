@@ -1,14 +1,3 @@
-export interface IUserData {
-  id: string;
-  username: string;
-  email: string;
-  role: "admin" | "empleado";
-  createdAt: string | Date;
-  isActive: boolean;
-  updatedAt?: string | Date;
-  password: string;
-}
-
 export class User {
   public readonly id: string;
   private _username: string;
@@ -20,7 +9,6 @@ export class User {
   private _updatedAt?: Date;
 
   constructor(data: IUserData) {
-    // Validación básica
     if (!data.id || !data.username || !data.email || !data.role || !data.createdAt || !data.password) {
       throw new Error("Datos de usuario inválidos: faltan campos esenciales.");
     }
@@ -73,6 +61,15 @@ export class User {
     if (this.isAdmin()) return true;
     return this._role === requiredRole;
   }
-
-  
+ 
+}
+export interface IUserData {
+  id: string;
+  username: string;
+  email: string;
+  role: "admin" | "empleado";
+  createdAt: string | Date;
+  isActive: boolean;
+  updatedAt?: string | Date;
+  password: string;
 }

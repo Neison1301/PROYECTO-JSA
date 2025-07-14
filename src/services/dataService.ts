@@ -1,4 +1,4 @@
-import { Product, Client, Sale } from "../types";
+import { Product, Client, Venta } from "../types";
 import { IUserData } from "../domain/usuario";
 import { storage } from "./almacenamiento";
 
@@ -96,13 +96,13 @@ class DataService {
   }
 
   // Ventas
-  getSales(): Sale[] {
-    const sales = storage.getItem<Sale[]>("sales") || [];
+  getSales(): Venta[] {
+    const sales = storage.getItem<Venta[]>("sales") || [];
     console.log("💰 Ventas recuperadas:", sales.length);
     return sales;
   }
 
-  saveSale(sale: Sale): void {
+  saveSale(sale: Venta): void {
     const sales = this.getSales();
     const existingIndex = sales.findIndex((s) => s.id === sale.id);
 
@@ -396,7 +396,7 @@ class DataService {
         {
           id: "client-002",
           name: "Ana Torres SAC",
-          email: "ventas@anatorres.com.pe",
+          email: "ventas@email.com.pe",
           phone: "991234567",
           address: "Calle San Martín 456, Miraflores",
           city: "Lima",

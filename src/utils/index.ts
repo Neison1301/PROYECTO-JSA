@@ -1,6 +1,5 @@
 // Genera un ID único.
 export const generarId = (): string => {
-  // Combina la marca de tiempo actual con un número aleatorio para mayor unicidad.
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 };
 

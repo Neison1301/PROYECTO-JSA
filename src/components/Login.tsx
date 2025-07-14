@@ -4,40 +4,27 @@ import { LogIn, User, Lock, AlertCircle } from 'lucide-react';
 
 // Componente para la pantalla de inicio de sesión.
 const InicioSesion: React.FC = () => {
-  // Estado para el nombre de usuario.
   const [nombreUsuario, setNombreUsuario] = useState('');
-  // Estado para la contraseña.
   const [contrasena, setContrasena] = useState('');
-  // Estado para mensajes de error.
   const [error, setError] = useState('');
-  // Estado para indicar si la operación está en curso.
   const [estaCargando, setEstaCargando] = useState(false);
-  // Función de inicio de sesión del contexto de autenticación.
   const { login } = useAuth();
-
-  // Maneja el envío del formulario de inicio de sesión.
   const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setEstaCargando(true);
 
     try {
-      // Intenta iniciar sesión con el nombre de usuario y contraseña.
       const exito = await login(nombreUsuario, contrasena);
-      // Si el inicio de sesión no es exitoso, muestra un error.
       if (!exito) {
         setError('Usuario o contraseña incorrectos');
       }
     } catch (err) {
-      // Captura y muestra errores generales de inicio de sesión.
       setError('Error al iniciar sesión');
     } finally {
-      // Finaliza el estado de carga.
       setEstaCargando(false);
     }
   };
-
-  // Renderiza el formulario de inicio de sesión.
   return (
     <div className="login-container">
       <div className="login-card">
@@ -61,13 +48,13 @@ const InicioSesion: React.FC = () => {
             <input
               type="text"
               className="form-control"
-              id="nombreUsuario" // ID para el campo de nombre de usuario.
+              id="nombreUsuario" 
               value={nombreUsuario}
               placeholder="Usuario"
               onChange={(e) => setNombreUsuario(e.target.value)}
               required
             />
-            <label htmlFor="nombreUsuario"> {/* Etiqueta asociada al ID del nombre de usuario. */}
+            <label htmlFor="nombreUsuario"> 
               <User size={18} className="me-2" />
             </label>             
 
@@ -77,13 +64,13 @@ const InicioSesion: React.FC = () => {
             <input
               type="password"
               className="form-control"
-              id="contrasena" // ID para el campo de contraseña.
+              id="contrasena"
               placeholder="Contraseña"
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
               required
             />
-            <label htmlFor="contrasena"> {/* Etiqueta asociada al ID de la contraseña. */}
+            <label htmlFor="contrasena">
               <Lock size={18} className="me-2" />
             </label>
           </div>
@@ -91,7 +78,7 @@ const InicioSesion: React.FC = () => {
           <button
             type="submit"
             className="btn btn-gradient w-100 py-2"
-            disabled={estaCargando} // Deshabilita el botón si está cargando.
+            disabled={estaCargando} 
           >
             {estaCargando ? (
               <>
