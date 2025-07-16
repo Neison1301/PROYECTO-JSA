@@ -1,20 +1,24 @@
+// src/components/VentanaVentas.tsx
+
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../../services/dataService';
-import { Venta, SaleItem, Product, Client } from '../../types';
-import { generarId, formatearMoneda, formatearFecha  } from '../../utils';
-import { ShoppingCart, Plus, Edit, Trash2, Search, User, Package, Calendar, DollarSign , FileText, FileSpreadsheet } from 'lucide-react';
-import { UtilidadesExportacion } from '../../utils/exportUtils';
+import { Venta ,ItemVenta } from '../../domain/Venta';
+import { Cliente } from '../../domain/Cliente';
+import { Producto } from '../../domain/Producto';
+import { generarId, formatearMoneda, formatearFecha } from '../../utils'; // generarId ya no se usa para nuevas ventas
+import { ShoppingCart, Plus, Edit, Trash2, Search, User, Package, Calendar, DollarSign, FileText, FileSpreadsheet } from 'lucide-react';
+import { UtilidadesExportacion } from '../../utils/exportUtils'; // Asumo que exportUtils ya existe
 
 const SalesWindow: React.FC = () => {
   const [sales, setSales] = useState<Venta[]>([]);
   const [filteredSales, setFilteredSales] = useState<Venta[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<Producto[]>([]);
+  const [clients, setClients] = useState<Cliente[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     clientId: '',
-    products: [] as SaleItem[],
+    products: [] as ItemVenta[],
     notes: ''
   });
   const [newItem, setNewItem] = useState({
@@ -23,25 +27,38 @@ const SalesWindow: React.FC = () => {
   });
 
   useEffect(() => {
+    // Llama a la función asíncrona dentro de useEffect
     loadData();
   }, []);
 
   useEffect(() => {
     filterSales();
-  }, [sales, searchTerm]);
+  }, [sales, searchTerm]); // Dependencia 'sales' para que el filtro se actualice cuando se cargan nuevas ventas
 
-  const loadData = () => {
-    const loadedSales = dataService.getSales();
-    // Ordenar ventas por fecha de creación (más recientes primero)
-    const sortedSales = loadedSales.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return dateB - dateA; // Orden descendente (más reciente primero)
-    });
-    
-    setSales(sortedSales);
-    setProducts(dataService.getProducts());
-    setClients(dataService.getClients());
+  const loadData = async () => {
+    try {
+      const loadedSales = await dataService.getSales();
+      const loadedProducts = await dataService.getProducts();
+      const loadedClients = await dataService.getClients();
+
+      // Ordenar ventas por fecha de creación (más recientes primero)
+      const sortedSales = (loadedSales || []).sort((a, b) => {
+        // Asegúrate de que createdAt sea un objeto Date
+        const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        return dateB - dateA; // Orden descendente (más reciente primero)
+      });
+      
+      setSales(sortedSales);
+      setProducts(loadedProducts || []);
+      setClients(loadedClients || []);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      setSales([]);
+      setProducts([]);
+      setClients([]);
+      alert('Hubo un error al cargar los datos. Inténtelo de nuevo.');
+    }
   };
 
   const filterSales = () => {
@@ -50,17 +67,22 @@ const SalesWindow: React.FC = () => {
       return;
     }
 
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
     const filtered = sales.filter(sale =>
-      sale.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.id.includes(searchTerm) ||
-      sale.status.toLowerCase().includes(searchTerm.toLowerCase())
+      // El cliente SIEMPRE debe tener un nombre
+      sale.clientName.toLowerCase().includes(lowerCaseSearchTerm) ||
+      // sale.id siempre existirá para elementos ya cargados, usamos '!'
+      (sale.id && sale.id.toLowerCase().includes(lowerCaseSearchTerm)) || // Comprueba si sale.id existe antes de usarlo
+      sale.status.toLowerCase().includes(lowerCaseSearchTerm) ||
+      // También podríamos buscar en los nombres de productos de la venta
+      sale.products.some(item => item.productName.toLowerCase().includes(lowerCaseSearchTerm))
     );
     
-    // Mantener el orden por fecha después del filtrado
     const sortedFiltered = filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return dateB - dateA; // Orden descendente (más reciente primero)
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+      return dateB - dateA;
     });
     
     setFilteredSales(sortedFiltered);
@@ -79,19 +101,35 @@ const SalesWindow: React.FC = () => {
   };
 
   const addProductToSale = () => {
-    if (!newItem.productId || !newItem.quantity) return;
+    if (!newItem.productId || !newItem.quantity) {
+      alert('Por favor, selecciona un producto y especifica una cantidad.');
+      return;
+    }
 
     const product = products.find(p => p.id === newItem.productId);
-    if (!product) return;
+    if (!product) {
+      alert('Producto no encontrado.');
+      return;
+    }
 
     const quantity = Number(newItem.quantity);
-    if (quantity <= 0 || quantity > product.stock) return;
+    if (isNaN(quantity) || quantity <= 0) {
+      alert('La cantidad debe ser un número positivo.');
+      return;
+    }
+    if (quantity > product.stock) {
+      alert(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}, Solicitado: ${quantity}`);
+      return;
+    }
 
     const existingItem = formData.products.find(item => item.productId === newItem.productId);
     
     if (existingItem) {
       const newQuantity = existingItem.quantity + quantity;
-      if (newQuantity > product.stock) return;
+      if (newQuantity > product.stock) {
+        alert(`La cantidad total para ${product.name} excede el stock disponible. (Max: ${product.stock})`);
+        return;
+      }
 
       setFormData(prev => ({
         ...prev,
@@ -102,8 +140,8 @@ const SalesWindow: React.FC = () => {
         )
       }));
     } else {
-      const saleItem: SaleItem = {
-        productId: product.id,
+      const saleItem: ItemVenta = {
+        productId: product.id!, // El ID del producto siempre debe existir aquí
         productName: product.name,
         quantity,
         price: product.price,
@@ -128,84 +166,114 @@ const SalesWindow: React.FC = () => {
 
   const calculateTotals = () => {
     const subtotal = formData.products.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * 0.18; // 
+    const tax = subtotal * 0.18; // 18% de IGV/IVA, ajusta si es necesario
     const total = subtotal + tax;
     return { subtotal, tax, total };
   };
 
-
-   //  MANEJAR LA EXPORTACIÓN DE VENTAS
+  // MANEJAR LA EXPORTACIÓN DE VENTAS
   const handleExportSales = (formato: 'excel' | 'pdf') => {
     if (filteredSales.length === 0) {
       alert('No hay ventas para exportar en la tabla actual. Aplica filtros si lo deseas.');
       return;
     }
     try {
-      // Usamos 'filteredSales' para exportar solo lo que el usuario ve o ha filtrado
       UtilidadesExportacion.exportarReporteVentas(filteredSales, formato);
       console.log(`Reporte de ventas exportado en formato ${formato}.`);
     } catch (error) {
       console.error('Error al exportar reporte de ventas:', error);
+      alert('Hubo un error al exportar el reporte de ventas.');
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.clientId || formData.products.length === 0) return;
+    if (!formData.clientId || formData.products.length === 0) {
+        alert('Debe seleccionar un cliente y agregar al menos un producto.');
+        return;
+    }
 
     const client = clients.find(c => c.id === formData.clientId);
-    if (!client) return;
+    if (!client) {
+        alert('Cliente no encontrado.');
+        return;
+    }
+
+    // Verificar stock antes de guardar la venta
+    for (const item of formData.products) {
+        const productInStock = products.find(p => p.id === item.productId);
+        if (!productInStock || productInStock.stock < item.quantity) {
+            alert(`Stock insuficiente para el producto: ${item.productName}. Disponible: ${productInStock?.stock || 0}, Solicitado: ${item.quantity}`);
+            return;
+        }
+    }
 
     const { subtotal, tax, total } = calculateTotals();
 
-    const saleData: Venta = {
-      id: generarId(),
+    // Declara saleData directamente como Venta. El 'id' es opcional en la interfaz
+    // y será asignado por el backend (json-server) en el POST.
+    const saleData: Venta = { 
       clientId: formData.clientId,
       clientName: client.name,
       products: formData.products,
       subtotal,
       tax,
       total,
-      status: 'Completada',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      status: 'Completada', // Estado por defecto para nuevas ventas
+      createdAt: new Date(), // Se establecerá o sobrescribirá por dataService
+      updatedAt: new Date(), // Se establecerá o sobrescribirá por dataService
       notes: formData.notes
     };
 
-    
-    formData.products.forEach(item => {
-      const product = products.find(p => p.id === item.productId);
-      if (product) {
-        const updatedProduct = {
-          ...product,
-          stock: product.stock - item.quantity,
-          updatedAt: new Date()
-        };
-        dataService.saveProduct(updatedProduct);
-      }
-    });
-        // ***** NUEVO CÓDIGO AQUÍ: Generar la boleta de venta *****
-        try {
-            // Asegúrate de pasar la `saleData` completa, los `products` y el `client`
-            // para que la boleta tenga toda la información necesaria.
-            UtilidadesExportacion.generarBoletaVentaPDF(saleData, products, client);
-            alert('Venta completada y boleta generada exitosamente!');
-        } catch (error) {
-            console.error('Error al generar la boleta de venta:', error);
-            alert('Venta completada, pero hubo un error al generar la boleta. Revisa la consola.');
+    try {
+        // Actualizar el stock de los productos. Esto se ejecutará como PUT.
+        for (const item of formData.products) {
+            const product = products.find(p => p.id === item.productId);
+            if (product) {
+                const updatedProduct = {
+                    ...product,
+                    stock: product.stock - item.quantity,
+                    updatedAt: new Date()
+                };
+                await dataService.saveProduct(updatedProduct); 
+            }
         }
-        // *********************************************************
-    dataService.saveSale(saleData);
-    loadData(); // Recargar datos para mantener el orden correcto
-    setShowForm(false);
-    resetForm();
+
+        // ¡CLAVE! Guardar la venta. 'saveSale' hará un POST y devolverá la venta con el ID asignado.
+        const savedSale = await dataService.saveSale(saleData); 
+
+        if (savedSale) { // Si la venta se guardó exitosamente y se recibió un ID del servidor
+            // Generar la boleta de venta PDF usando el objeto 'savedSale' que ahora TIENE EL ID
+            await UtilidadesExportacion.generarBoletaVentaPDF(savedSale, products, client);
+            
+            alert('Venta completada y boleta generada exitosamente!');
+            loadData(); // Recargar todos los datos para que la nueva venta aparezca en la tabla
+            setShowForm(false);
+            resetForm();
+        } else {
+            // Manejo si saveSale devuelve null (indicando un error en el servicio)
+            alert('Error: No se pudo guardar la venta. Inténtelo de nuevo.');
+        }
+    } catch (error) {
+        console.error('Error al completar la venta o generar boleta:', error);
+        alert('Hubo un error al procesar la venta. Verifique los datos, stock o la configuración del servidor.');
+    }
   };
 
-  const handleDelete = (sale: Venta) => {
-    if (window.confirm(`¿Estás seguro de eliminar la venta #${sale.id}?`)) {
-      dataService.deleteSale(sale.id);
-      loadData(); // Recargar datos para mantener el orden correcto
+  const handleDelete = async (sale: Venta) => {
+    // Confirmación al usuario antes de eliminar
+    if (window.confirm(`¿Estás seguro de eliminar la venta #${sale.id}? Esta acción no revertirá el stock de productos.`)) {
+      try {
+        // Como 'sale' viene de la lista cargada, sale.id siempre estará definido.
+        // Usamos el operador '!' para afirmar a TypeScript que no es undefined.
+        await dataService.deleteSale(sale.id!); 
+        loadData(); // Recargar datos para reflejar el cambio
+        alert('Venta eliminada correctamente.');
+      } catch (error) {
+        console.error("Error al eliminar la venta:", error);
+        alert('Hubo un error al eliminar la venta.');
+      }
     }
   };
 
@@ -227,9 +295,17 @@ const SalesWindow: React.FC = () => {
     }
   };
 
-  const getTimeAgo = (date: Date) => {
+  const getTimeAgo = (date: Date | string) => {
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - new Date(date).getTime()) / (1000 * 60));
+    // Asegurarse de que 'date' sea un objeto Date válido
+    const saleDate = typeof date === 'string' ? new Date(date) : date;
+
+    // Verificar si saleDate es una fecha válida después de la conversión
+    if (isNaN(saleDate.getTime())) {
+      return 'Fecha inválida';
+    }
+
+    const diffInMinutes = Math.floor((now.getTime() - saleDate.getTime()) / (1000 * 60));
     
     if (diffInMinutes < 1) return 'Hace un momento';
     if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
@@ -240,7 +316,7 @@ const SalesWindow: React.FC = () => {
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return `Hace ${diffInDays}d`;
     
-    return formatearFecha (date);
+    return formatearFecha(saleDate); // Asegúrate de pasar un objeto Date
   };
 
   if (showForm) {
@@ -322,7 +398,7 @@ const SalesWindow: React.FC = () => {
                     type="button"
                     className="btn btn-primary w-100"
                     onClick={addProductToSale}
-                    disabled={!newItem.productId || !newItem.quantity}
+                    disabled={!newItem.productId || !newItem.quantity || Number(newItem.quantity) <= 0 || Number(newItem.quantity) > (products.find(p => p.id === newItem.productId)?.stock || 0)}
                   >
                     <Plus size={18} className="me-1" />
                     Agregar
@@ -439,31 +515,30 @@ const SalesWindow: React.FC = () => {
           <ShoppingCart className="me-2" />
           Gestión de Ventas
         </h4>
-         <div className="d-flex align-items-center">
-            <button
-                className="btn btn-outline-success me-2"
-                onClick={() => handleExportSales('excel')}
-                title="Exportar ventas a Excel"
-            >
-                <FileSpreadsheet size={18} className="me-1" />
-                Excel
-            </button>
-            <button
-                className="btn btn-outline-danger me-3"
-                onClick={() => handleExportSales('pdf')}
-                title="Exportar ventas a PDF"
-            >
-                <FileText size={18} className="me-1" />
-                PDF
-            </button>
-            {/* Botón de "Nueva Venta" original */}
-            <button
-                className="btn btn-gradient"
-                onClick={() => setShowForm(true)}
-            >
-                <Plus size={18} className="me-2" />
-                Nueva Venta
-            </button>
+        <div className="d-flex align-items-center">
+          <button
+              className="btn btn-outline-success me-2"
+              onClick={() => handleExportSales('excel')}
+              title="Exportar ventas a Excel"
+          >
+              <FileSpreadsheet size={18} className="me-1" />
+              Excel
+          </button>
+          <button
+              className="btn btn-outline-danger me-3"
+              onClick={() => handleExportSales('pdf')}
+              title="Exportar ventas a PDF"
+          >
+              <FileText size={18} className="me-1" />
+              PDF
+          </button>
+          <button
+              className="btn btn-gradient"
+              onClick={() => setShowForm(true)}
+          >
+              <Plus size={18} className="me-2" />
+              Nueva Venta
+          </button>
         </div>
       </div>
 
@@ -476,7 +551,7 @@ const SalesWindow: React.FC = () => {
             <input
               type="text"
               className="form-control"
-              placeholder="Buscar ventas..."
+              placeholder="Buscar ventas por cliente, ID o estado..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -520,10 +595,11 @@ const SalesWindow: React.FC = () => {
               </tr>
             ) : (
               filteredSales.map((sale, index) => (
-                <tr key={sale.id} className={index < 3 ? 'table-success' : ''}>
+                // Asegúrate de que sale.id esté presente antes de usarlo como key
+                <tr key={sale.id || `temp-${index}`} className={index < 3 ? 'table-success' : ''}>
                   <td>
                     <div className="d-flex align-items-center">
-                      <code>{sale.id}</code>
+                      <code>{sale.id || 'N/A'}</code> {/* Mostrar 'N/A' si por alguna razón no hay ID */}
                       {index < 3 && (
                         <span className="badge bg-success ms-2 small">NUEVA</span>
                       )}
@@ -539,11 +615,11 @@ const SalesWindow: React.FC = () => {
                     <div>
                       <div className="d-flex align-items-center mb-1">
                         <Package size={14} className="me-1 text-muted" />
-                        <span className="badge bg-info">{sale.products.length} productos</span>
+                        <span className="badge bg-info">{(sale.products || []).length} productos</span>
                       </div>
                       <small className="text-muted">
-                        {sale.products.slice(0, 2).map(p => p.productName).join(', ')}
-                        {sale.products.length > 2 && '...'}
+                        {(sale.products || []).slice(0, 2).map(p => p.productName).join(', ')}
+                        {(sale.products || []).length > 2 && '...'}
                       </small>
                     </div>
                   </td>
@@ -565,7 +641,7 @@ const SalesWindow: React.FC = () => {
                     <div className="d-flex align-items-center">
                       <Calendar size={14} className="me-1 text-muted" />
                       <div>
-                        <small>{formatearFecha (sale.createdAt)}</small>
+                        <small>{formatearFecha(sale.createdAt)}</small>
                         <br />
                         <small className="text-primary fw-bold">
                           {getTimeAgo(sale.createdAt)}
@@ -579,7 +655,7 @@ const SalesWindow: React.FC = () => {
                         className="btn btn-sm btn-outline-info"
                         title="Ver detalles"
                         onClick={() => {
-                          alert(`Detalles de venta:\n\nCliente: ${sale.clientName}\nTotal: ${formatearMoneda(sale.total)}\nFecha: ${formatearFecha (sale.createdAt)}\n\nProductos:\n${sale.products.map(p => `- ${p.productName} x${p.quantity} = ${formatearMoneda(p.total)}`).join('\n')}`);
+                          alert(`Detalles de venta:\n\nID Venta: ${sale.id || 'N/A'}\nCliente: ${sale.clientName}\nTotal: ${formatearMoneda(sale.total)}\nFecha: ${formatearFecha(sale.createdAt)}\n\nProductos:\n${(sale.products || []).map(p => `- ${p.productName} x${p.quantity} = ${formatearMoneda(p.total)}`).join('\n')}\n\nNotas: ${sale.notes || 'N/A'}`);
                         }}
                       >
                         <Edit size={14} />

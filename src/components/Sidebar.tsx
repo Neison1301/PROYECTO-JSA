@@ -9,7 +9,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Menu
+  Menu,
+  HardHat ,
+  UserCheck 
+
 } from 'lucide-react';
 
 // Define las propiedades que recibe el componente Sidebar.
@@ -33,6 +36,7 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
     { icono: Users, etiqueta: 'Clientes', componente: 'clients', rolesPermitidos: ['admin', 'empleado'] },
     { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales', rolesPermitidos: ['admin', 'empleado'] },
     { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin'] }, 
+    { icono: HardHat, etiqueta: 'Empleados', componente: 'addUserForm', rolesPermitidos: ['admin'] },
     { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'empleado'] }
   ];
 

@@ -1,111 +1,200 @@
-import {  AuthState } from '../types';
-import { dataService } from './dataService';
-import { storage } from './almacenamiento';
-import { IUserData, User } from '../domain/usuario'; 
+import { Autenticación } from "../domain/Usuario";
+import { dataService } from "./dataService";
+import { storage } from "./almacenamiento";
+import { User } from "../domain/Usuario";
 
 class AuthService {
-  getCurrentUser(): IUserData | null {
-    return storage.getItem<IUserData>('currentUser');
+  getCurrentUser(): User | null {
+    const storedUser = storage.getItem<any>("currentUser");
+    if (storedUser) {
+      // Reconstruir la instancia de User desde el objeto plano
+      return new User(
+        storedUser.id,
+        storedUser.username,
+        storedUser.email,
+        storedUser.role,
+        storedUser.createdAt,
+        storedUser.password,
+        storedUser.isActive,
+        storedUser.updatedAt
+      );
+    }
+    return null;
   }
 
-  login(username: string, password: string): AuthState {
-        const users = dataService.getUsers();
-        const user = users.find(u =>
-            (u.username === username || u.email === username) &&
-            u.password === password &&
-            u.isActive
+  async login(username: string, password: string): Promise<Autenticación> {
+    try {
+      const users = await dataService.getUsers(); 
+      const user = users.find(
+        (u) =>
+          (u.username === username || u.email === username) &&
+          u.password === password &&
+          u.isActive
+      );
+
+      if (user) {
+        // Crear instancia de User
+        const domainUser = new User(
+          user.id,
+          user.username,
+          user.email,
+          user.role,
+          user.createdAt,
+          user.password,
+          user.isActive,
+          user.updatedAt
         );
+        
+        // Almacenar en localStorage (se serializa automáticamente)
+        storage.setItem("currentUser", domainUser);
+        
+        return { isAuthenticated: true, user: domainUser };
+      }
 
-        if (user) {
-             storage.setItem('currentUser', user);
-             const domainUser = new User(user);
-            return { isAuthenticated: true, user: domainUser };
-        }
-
-        // Si no se encuentra el usuario, retorna un estado de no autenticado.
-        return { isAuthenticated: false, user: null };
+      return { isAuthenticated: false, user: null };
+    } catch (error) {
+      console.error("Error durante el inicio de sesión:", error);
+      return { isAuthenticated: false, user: null };
     }
-
+  }
 
   logout(): void {
-    storage.removeItem('currentUser');
+    storage.removeItem("currentUser");
   }
 
   isAuthenticated(): boolean {
     return this.getCurrentUser() !== null;
   }
 
-  getAuthState(): AuthState {
-    const userRaw = this.getCurrentUser(); // Esto devuelve IUserData (con Date objects si localStorage lo maneja)
-        if (userRaw) {
-            try {
-                // Crea una instancia de la CLASE `User` a partir de `userRaw` (IUserData)
-                const domainUser = new User(userRaw);
-                return {
-                    isAuthenticated: true,
-                    user: domainUser // Pasa la instancia de la CLASE User
-                };
-            } catch (error) {
-                console.error("Error al crear la instancia de User desde los datos almacenados:", error);
-                this.logout(); // Limpia la sesión
-                return { isAuthenticated: false, user: null };
-            }
-        }
-        return { isAuthenticated: false, user: null };
+  getAuthState(): Autenticación {
+    const user = this.getCurrentUser();
+    return {
+      isAuthenticated: user !== null,
+      user: user,
+    };
   }
 
-  updateProfile(userId: string, updates: Partial<IUserData>): boolean {
+  async updateProfile(
+    userId: string,
+    updates: Partial<{
+      username: string;
+      email: string;
+      role: "admin" | "empleado";
+      isActive: boolean;
+    }>
+  ): Promise<boolean> {
     try {
-      const users = dataService.getUsers();
-      const userIndex = users.findIndex(u => u.id === userId);
-      
+      const users = await dataService.getUsers();
+      const userIndex = users.findIndex((u) => u.id === userId);
+
       if (userIndex === -1) return false;
 
+      // Validaciones para email y username duplicados
       if (updates.email) {
-        const emailExists = users.find(u => u.email === updates.email && u.id !== userId);
-        if (emailExists) return false;
+        const emailExists = users.find(
+          (u) => u.email === updates.email && u.id !== userId
+        );
+        if (emailExists) {
+          console.warn("El email ya existe para otro usuario.");
+          return false;
+        }
       }
 
       if (updates.username) {
-        const usernameExists = users.find(u => u.username === updates.username && u.id !== userId);
-        if (usernameExists) return false;
+        const usernameExists = users.find(
+          (u) => u.username === updates.username && u.id !== userId
+        );
+        if (usernameExists) {
+          console.warn("El nombre de usuario ya existe para otro usuario.");
+          return false;
+        }
       }
 
-      const updatedUser = { ...users[userIndex], ...updates };
-      users[userIndex] = updatedUser;
-      
-      dataService.saveUser(updatedUser);
-      
-      storage.setItem('currentUser', updatedUser);
-      
-      return true;
+      const userToUpdate = users[userIndex];
+      const updatedUser = {
+        ...userToUpdate,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const savedUser = await dataService.saveUser(updatedUser);
+
+      if (savedUser) {
+        // Actualizar localStorage si es el usuario actual
+        const currentUser = this.getCurrentUser();
+        if (currentUser && currentUser.id === userId) {
+          const newUserInstance = new User(
+            savedUser.id,
+            savedUser.username,
+            savedUser.email,
+            savedUser.role,
+            savedUser.createdAt,
+            savedUser.password,
+            savedUser.isActive,
+            savedUser.updatedAt
+          );
+          storage.setItem("currentUser", newUserInstance);
+        }
+        return true;
+      }
+      return false;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error al actualizar el perfil:", error);
       return false;
     }
   }
 
-  changePassword(userId: string, currentPassword: string, newPassword: string): boolean {
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<boolean> {
     try {
-      const users = dataService.getUsers();
-      const user = users.find(u => u.id === userId);
-      
-      if (!user || user.password !== currentPassword) {
+      const users = await dataService.getUsers();
+      const user = users.find((u) => u.id === userId);
+
+      if (!user) {
+        console.warn("Usuario no encontrado para cambiar contraseña.");
         return false;
       }
 
-      const updatedUser = { ...user, password: newPassword };
-      dataService.saveUser(updatedUser);
-      
-      storage.setItem('currentUser', updatedUser);
-      
-      return true;
+      if (user.password !== currentPassword) {
+        console.warn("Contraseña actual incorrecta.");
+        return false;
+      }
+
+      const updatedUser = {
+        ...user,
+        password: newPassword,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const savedUser = await dataService.saveUser(updatedUser);
+
+      if (savedUser) {
+        // Actualizar localStorage si es el usuario actual
+        const currentUser = this.getCurrentUser();
+        if (currentUser && currentUser.id === userId) {
+          const newUserInstance = new User(
+            savedUser.id,
+            savedUser.username,
+            savedUser.email,
+            savedUser.role,
+            savedUser.createdAt,
+            savedUser.password,
+            savedUser.isActive,
+            savedUser.updatedAt
+          );
+          storage.setItem("currentUser", newUserInstance);
+        }
+        return true;
+      }
+      return false;
     } catch (error) {
-      console.error('Error changing password:', error);
+      console.error("Error al cambiar la contraseña:", error);
       return false;
     }
   }
 }
 
 export const authService = new AuthService();
-

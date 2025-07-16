@@ -1,15 +1,15 @@
 // src/components/FormularioUsuario.tsx
 import React, { useState, useEffect } from "react";
 import { dataService } from "../../services/dataService";
-import { generarId, validarRequerido, validarEmail } from "../../utils";
+import { generarId, validarRequerido, validarEmail } from "../../utils"; // `generarId` ya no se usará para nuevos usuarios aquí
 import { UserPlus, XCircle } from "lucide-react";
-import { useWindows } from "../../contexts/WindowContext"; // Importa el contexto de ventanas
-import { IUserData } from "../../domain/usuario";
+import { useWindows } from "../../contexts/WindowContext";
+import { User  } from "../../domain/Usuario";
 
 interface FormularioUsuarioProps {
   onUserSaved: () => void;
-  userToEdit?: IUserData | null; // Usuario a editar (opcional)
-  windowId: string; // ID de la ventana para cerrarla
+  userToEdit?: User  | null;
+  windowId: string;
 }
 
 const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
@@ -17,24 +17,22 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
   userToEdit,
   windowId,
 }) => {
-  const { closeWindow } = useWindows(); // Obtiene la función para cerrar ventanas
+  const { closeWindow } = useWindows();
 
-  // Estado del formulario
   const [datosFormulario, setDatosFormulario] = useState({
     username: "",
     email: "",
     password: "",
     role: "empleado",
   });
-  const [errores, setErrores] = useState<{ [key: string]: string }>({}); // Estado para errores de validación
+  const [errores, setErrores] = useState<{ [key: string]: string }>({});
 
-  // Carga datos del usuario si se está editando
   useEffect(() => {
     if (userToEdit) {
       setDatosFormulario({
         username: userToEdit.username,
         email: userToEdit.email,
-        password: "", // La contraseña no se carga para seguridad
+        password: "",
         role: userToEdit.role,
       });
     } else {
@@ -45,9 +43,9 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
         role: "empleado",
       });
     }
+    setErrores({});
   }, [userToEdit]);
 
-  // Maneja cambios en los inputs del formulario
   const manejarCambioInput = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -55,12 +53,12 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
     setDatosFormulario((prev) => ({ ...prev, [name]: value }));
     if (errores[name]) {
       setErrores((prev) => ({ ...prev, [name]: "" }));
-    } // Limpia error al cambiar
+    }
   };
 
-  // Valida los campos del formulario
-  const validarFormulario = (): boolean => {
+  const validarFormulario = async (): Promise<boolean> => {
     const nuevosErrores: { [key: string]: string } = {};
+
     if (!validarRequerido(datosFormulario.username)) {
       nuevosErrores.username = "El nombre de usuario es requerido";
     }
@@ -72,50 +70,75 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
     if (!userToEdit && !validarRequerido(datosFormulario.password)) {
       nuevosErrores.password = "La contraseña es requerida";
     }
-    if (
-      userToEdit &&
-      datosFormulario.password &&
-      !validarRequerido(datosFormulario.password)
-    ) {
-      nuevosErrores.password =
-        "La contraseña no puede estar vacía si la estás cambiando";
+    if (userToEdit && datosFormulario.password && !validarRequerido(datosFormulario.password)) {
+      nuevosErrores.password = "La contraseña no puede estar vacía si la estás cambiando";
     }
 
-    // Validación de email existente
-    const existingUsers = dataService.getUsers();
-    const emailExistente = existingUsers.find(
-      (u) =>
-        u.email === datosFormulario.email &&
-        (!userToEdit || u.id !== userToEdit.id)
-    );
-    if (emailExistente) {
-      nuevosErrores.email = "Este correo ya está en uso";
+    try {
+      const existingUsers = await dataService.getUsers();
+      const emailExistente = existingUsers.find(
+        (u) =>
+          u.email === datosFormulario.email &&
+          (!userToEdit || u.id !== userToEdit.id)
+      );
+      if (emailExistente) {
+        nuevosErrores.email = "Este correo ya está en uso por otro usuario.";
+      }
+    } catch (error) {
+      console.error("Error al verificar usuarios existentes:", error);
+      nuevosErrores.general = "Error al verificar la base de datos.";
     }
 
     setErrores(nuevosErrores);
-    return Object.keys(nuevosErrores).length === 0; // Retorna true si no hay errores
+    return Object.keys(nuevosErrores).length === 0;
   };
 
-  // Maneja el envío del formulario
-  const manejarEnvio = (e: React.FormEvent) => {
+  const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validarFormulario()) return; // Si la validación falla, no procede
+    const esValido = await validarFormulario();
+    if (!esValido) {
+      console.log("Errores de validación:", errores);
+      return;
+    }
 
-    // Construye el objeto de usuario a guardar/actualizar
-    const newUser: IUserData = {
-      id: userToEdit?.id || generarId(), // Usa ID existente o genera uno nuevo
+    // --- CAMBIOS AQUÍ ---
+    // Objeto base con los datos del formulario
+    const baseUserData = {
       username: datosFormulario.username,
       email: datosFormulario.email,
-      password: datosFormulario.password || userToEdit?.password || "", // Mantiene contraseña si no se cambia
+      password: datosFormulario.password || userToEdit?.password || "",
       role: datosFormulario.role as "admin" | "empleado",
-      createdAt: userToEdit?.createdAt || new Date(),
-      updatedAt: new Date(),
-      isActive: true,
+      isActive: userToEdit?.isActive !== undefined ? userToEdit.isActive : true,
     };
 
-    dataService.saveUser(newUser); // Guarda el usuario
-    onUserSaved(); // Notifica que el usuario fue guardado
-    closeWindow(windowId); // Cierra la ventana actual
+    let userToSave: User ;
+
+    if (userToEdit) {
+      // Si estamos EDITANDO un usuario existente
+      userToSave = {
+        ...baseUserData,
+        id: userToEdit.id, // Mantenemos el ID existente
+        // `createdAt` se mantendrá desde `userToEdit` y `updatedAt` lo manejará `saveData`
+        createdAt: userToEdit.createdAt, // Asegúrate de mantener la fecha de creación original
+      };
+    } else {
+      // Si estamos CREANDO un nuevo usuario
+      userToSave = {
+        ...baseUserData,
+        // ¡IMPORTANTE! No se incluye el 'id' aquí. JSON Server lo generará.
+        // `createdAt` y `updatedAt` serán establecidos en `saveData` para la creación
+      } as User ; // Casteamos para asegurar que coincida con IUserData aunque le falte el ID por un momento
+    }
+    // --- FIN CAMBIOS ---
+
+    try {
+      await dataService.saveUser(userToSave);
+      onUserSaved();
+      closeWindow(windowId);
+    } catch (error) {
+      console.error("Error al guardar el usuario:", error);
+      setErrores((prev) => ({ ...prev, general: "Error al guardar el usuario. Inténtalo de nuevo." }));
+    }
   };
 
   return (
@@ -125,6 +148,12 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
           <UserPlus className="me-2" />
           {userToEdit ? "Editar Usuario" : "Nuevo empleado"}
         </h5>
+        <button
+          type="button"
+          className="btn-close"
+          aria-label="Cerrar"
+          onClick={() => closeWindow(windowId)}
+        ></button>
       </div>
       <div className="modal-body">
         <form onSubmit={manejarEnvio}>
@@ -174,7 +203,7 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
               name="password"
               value={datosFormulario.password}
               onChange={manejarCambioInput}
-              autoComplete="off"
+              autoComplete="new-password"
             />
             {errores.password && (
               <div className="invalid-feedback">{errores.password}</div>
@@ -195,15 +224,22 @@ const FormularioUsuario: React.FC<FormularioUsuarioProps> = ({
               <option value="admin">Administrador</option>
             </select>
           </div>
+          {errores.general && (
+            <div className="alert alert-danger" role="alert">
+              {errores.general}
+            </div>
+          )}
           <div className="d-flex justify-content-end gap-2">
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => closeWindow(windowId)} // Cierra la ventana al cancelar
+              onClick={() => closeWindow(windowId)}
             >
+              <XCircle size={18} className="me-1" />
               Cancelar
             </button>
             <button type="submit" className="btn btn-gradient">
+              <UserPlus size={18} className="me-1" />
               {userToEdit ? "Actualizar Usuario" : "Crear Usuario"}
             </button>
           </div>

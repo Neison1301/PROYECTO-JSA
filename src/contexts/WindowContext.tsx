@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
-import { Window } from '../types';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import { Ventanas } from '../domain/Ventanas';
 import { generarId } from '../utils';
 
 interface WindowContextType {
-  windows: Window[];
+  windows: Ventanas[];
   openWindow: (title: string, component: string, size?: { width: number; height: number }, maximized?: boolean) => void;
   closeWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
@@ -27,99 +27,82 @@ interface WindowProviderProps {
   children: ReactNode;
 }
 
-// Este hook encapsula su propio useRef y useCallback.
-const useThrottledCallback = (callback: Function, delay: number) => {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastArgsRef = useRef<any[] | null>(null);
-  const lastThisRef = useRef<any>(null);
-
-  const throttledCallback = useCallback(function(this: any, ...args: any[]) {
-    lastArgsRef.current = args;
-    lastThisRef.current = this;
-
-    if (!timeoutRef.current) {
-      callback.apply(this, args);
-      timeoutRef.current = setTimeout(() => {
-        timeoutRef.current = null;
-        lastArgsRef.current = null;
-        lastThisRef.current = null;
-      }, delay);
-    }
-  }, [callback, delay]); 
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []); // Se ejecuta solo una vez al montar/desmontar
-
-  return throttledCallback;
-};
-
-
 const WindowProvider: React.FC<WindowProviderProps> = ({ children }) => {
-  const [windows, setWindows] = useState<Window[]>([]);
+  const [windows, setWindows] = useState<Ventanas[]>([]);
   const [highestZIndex, setHighestZIndex] = useState(100);
 
+  // Inicializar dashboard una sola vez
   useEffect(() => {
-    if (!windows.some(w => w.component === 'dashboard')) {
-      openWindow('Dashboard', 'dashboard', { width: window.innerWidth, height: window.innerHeight }, true);
+    const hasDashboard = windows.some(w => w.component === 'dashboard');
+    if (!hasDashboard) {
+      const dashboardWindow: Ventanas = {
+        id: generarId(),
+        title: 'Dashboard',
+        component: 'dashboard',
+        position: { x: 0, y: 0 },
+        size: { width: window.innerWidth, height: window.innerHeight },
+        isMinimized: false,
+        isMaximized: true,
+        zIndex: 0
+      };
+      setWindows([dashboardWindow]);
     }
   }, []);
 
+  // Memoizar la función de apertura de ventanas
   const openWindow = useCallback((
     title: string,
     component: string,
     size: { width: number; height: number } = { width: 800, height: 600 },
     maximized: boolean = false
   ) => {
-    const existingWindow = windows.find(w => w.component === component);
+    setWindows(prev => {
+      const existingWindow = prev.find(w => w.component === component);
 
-    if (existingWindow) {
-      const newZIndex = highestZIndex + 1;
-      setWindows(prev => prev.map(w =>
-        w.id === existingWindow.id
-          ? { ...w, isMinimized: false, zIndex: newZIndex }
-          : w
-      ));
-      setHighestZIndex(newZIndex);
-      return;
-    }
+      if (existingWindow) {
+        const newZIndex = highestZIndex + 1;
+        setHighestZIndex(newZIndex);
+        return prev.map(w =>
+          w.id === existingWindow.id
+            ? { ...w, isMinimized: false, zIndex: newZIndex }
+            : w
+        );
+      }
 
-    const nonMaximizedWindows = windows.filter(w => !w.isMaximized);
-    const offsetX = nonMaximizedWindows.length * 30;
-    const offsetY = nonMaximizedWindows.length * 30;
+      const nonMaximizedWindows = prev.filter(w => !w.isMaximized);
+      const offsetX = nonMaximizedWindows.length * 30;
+      const offsetY = nonMaximizedWindows.length * 30;
 
-    let newZIndex: number;
-    let initialPosition = { x: Math.min(50 + offsetX, 300), y: Math.min(50 + offsetY, 200) };
-    let initialSize = size;
+      let newZIndex: number;
+      let initialPosition = { x: Math.min(50 + offsetX, 300), y: Math.min(50 + offsetY, 200) };
+      let initialSize = size;
 
-    if (component === 'dashboard') {
-      newZIndex = 0;
-      maximized = true;
-      initialPosition = { x: 0, y: 0 };
-      initialSize = { width: window.innerWidth, height: window.innerHeight };
-    } else {
-      newZIndex = highestZIndex + 1;
-      setHighestZIndex(newZIndex);
-    }
+      if (component === 'dashboard') {
+        newZIndex = 0;
+        maximized = true;
+        initialPosition = { x: 0, y: 0 };
+        initialSize = { width: window.innerWidth, height: window.innerHeight };
+      } else {
+        newZIndex = highestZIndex + 1;
+        setHighestZIndex(newZIndex);
+      }
 
-    const newWindow: Window = {
-      id: generarId(),
-      title,
-      component,
-      position: maximized ? { x: 0, y: 0 } : initialPosition,
-      size: maximized ? { width: window.innerWidth, height: window.innerHeight } : initialSize,
-      isMinimized: false,
-      isMaximized: maximized,
-      zIndex: newZIndex
-    };
+      const newWindow: Ventanas = {
+        id: generarId(),
+        title,
+        component,
+        position: maximized ? { x: 0, y: 0 } : initialPosition,
+        size: maximized ? { width: window.innerWidth, height: window.innerHeight } : initialSize,
+        isMinimized: false,
+        isMaximized: maximized,
+        zIndex: newZIndex
+      };
 
-    setWindows(prev => [...prev, newWindow]);
-  }, [windows, highestZIndex]);
+      return [...prev, newWindow];
+    });
+  }, [highestZIndex]);
 
+  // Funciones optimizadas con batching automático de React
   const closeWindow = useCallback((id: string) => {
     setWindows(prev => prev.filter(w => w.id !== id));
   }, []);
@@ -143,15 +126,12 @@ const WindowProvider: React.FC<WindowProviderProps> = ({ children }) => {
     ));
   }, []);
 
-  // Definimos la función de actualización sin throttle/useCallback primero
-  const _updateWindowPosition = (id: string, position: { x: number; y: number }) => {
+  // Actualización de posición sin throttle - React ya maneja el batching
+  const updateWindowPosition = useCallback((id: string, position: { x: number; y: number }) => {
     setWindows(prev => prev.map(w =>
       w.id === id ? { ...w, position, previousPosition: position } : w
     ));
-  };
-
-  // Luego, usamos el hook useThrottledCallback para obtener la versión throttled
-  const updateWindowPosition = useThrottledCallback(_updateWindowPosition, 1000 / 60);
+  }, []);
 
   const updateWindowSize = useCallback((id: string, size: { width: number; height: number }) => {
     setWindows(prev => prev.map(w =>
@@ -160,19 +140,23 @@ const WindowProvider: React.FC<WindowProviderProps> = ({ children }) => {
   }, []);
 
   const bringToFront = useCallback((id: string) => {
-    const windowToBringFront = windows.find(w => w.id === id);
-    if (windowToBringFront && windowToBringFront.component !== 'dashboard') {
-      if (windowToBringFront.zIndex !== highestZIndex) {
-        const newZIndex = highestZIndex + 1;
-        setWindows(prev => prev.map(w =>
-          w.id === id ? { ...w, zIndex: newZIndex } : w
-        ));
-        setHighestZIndex(newZIndex);
+    setWindows(prev => {
+      const windowToBringFront = prev.find(w => w.id === id);
+      if (windowToBringFront && windowToBringFront.component !== 'dashboard') {
+        if (windowToBringFront.zIndex !== highestZIndex) {
+          const newZIndex = highestZIndex + 1;
+          setHighestZIndex(newZIndex);
+          return prev.map(w =>
+            w.id === id ? { ...w, zIndex: newZIndex } : w
+          );
+        }
       }
-    }
-  }, [windows, highestZIndex]);
+      return prev;
+    });
+  }, [highestZIndex]);
 
-  const value: WindowContextType = {
+  // Memoizar el valor del contexto
+  const value = useMemo<WindowContextType>(() => ({
     windows,
     openWindow,
     closeWindow,
@@ -181,7 +165,16 @@ const WindowProvider: React.FC<WindowProviderProps> = ({ children }) => {
     updateWindowPosition,
     updateWindowSize,
     bringToFront
-  };
+  }), [
+    windows,
+    openWindow,
+    closeWindow,
+    minimizeWindow,
+    maximizeWindow,
+    updateWindowPosition,
+    updateWindowSize,
+    bringToFront
+  ]);
 
   return (
     <WindowContext.Provider value={value}>

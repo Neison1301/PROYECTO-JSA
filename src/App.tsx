@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { WindowProvider } from './contexts/WindowContext'; 
-import { dataService } from './services/dataService';
 import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import WindowManager from './components/GestorVentanas';
@@ -15,7 +14,7 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
 
-    dataService.initializeDefaultData();
+   // dataService.initializeDefaultData();
   }, []);
 
   if (!isAuthenticated) {

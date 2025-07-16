@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, memo } from "react";
 import { useWindows } from "../contexts/WindowContext";
-import { Window } from "../types";
+import { Ventanas } from '../domain/Ventanas';
 import { Minimize2, Maximize2, X, Square } from "lucide-react";
 
 import Dashboard from "./Ventas/Dashboard";
@@ -87,7 +87,7 @@ const GestorVentanas: React.FC = () => {
 
 // Define las propiedades para el ComponenteVentana
 interface PropiedadesComponenteVentana {
-  ventana: Window;
+  ventana: Ventanas;
   children: React.ReactNode;
   onClose: () => void;
   onMinimize: () => void;
