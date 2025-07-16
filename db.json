@@ -58,11 +58,11 @@
       "name": "Audífonos Bluetooth Xiaomi",
       "description": "Audífonos inalámbricos Xiaomi Redmi Buds 3 Lite, con estuche de carga.",
       "price": 89.9,
-      "stock": 35,
+      "stock": 30,
       "category": "Audio",
       "sku": "AUD-XIAO-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-15T06:00:27.735Z",
+      "updatedAt": "2025-07-16T04:30:23.133Z",
       "isActive": true
     },
     {
@@ -70,11 +70,11 @@
       "name": "Smart TV LG 55 pulgadas 4K",
       "description": "Televisor inteligente LG con resolución 4K y webOS.",
       "price": 2499,
-      "stock": 4,
+      "stock": 3,
       "category": "Electrónica",
       "sku": "TV-LG-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-16T02:35:05.461Z",
+      "updatedAt": "2025-07-16T04:31:38.836Z",
       "isActive": true
     },
     {
@@ -82,11 +82,11 @@
       "name": "Smartphone Samsung Galaxy A54",
       "description": "Celular Samsung con cámara de 50MP y batería de larga duración.",
       "price": 1299,
-      "stock": 29,
+      "stock": 27,
       "category": "Telefonía",
       "sku": "SMART-SAMS-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-15T05:52:48.911Z",
+      "updatedAt": "2025-07-16T04:31:18.758Z",
       "isActive": true
     },
     {
@@ -886,7 +886,49 @@
   ],
   "sales": [
     {
-      "id": "8b4b",
+      "id": "016e",
+      "clientId": "client-002",
+      "clientName": "Ana Torres SAC",
+      "products": [
+        {
+          "productId": "prod-002",
+          "productName": "Audífonos Bluetooth Xiaomi",
+          "quantity": 1,
+          "price": 89.9,
+          "total": 89.9
+        }
+      ],
+      "subtotal": 89.9,
+      "tax": 16.182000000000002,
+      "total": 106.08200000000001,
+      "status": "Completada",
+      "createdAt": "2025-07-16T04:30:23.133Z",
+      "updatedAt": "2025-07-16T04:30:23.144Z",
+      "notes": ""
+    },
+    {
+      "id": "4d89",
+      "clientId": "client-002",
+      "clientName": "Ana Torres SAC",
+      "products": [
+        {
+          "productId": "prod-004",
+          "productName": "Smartphone Samsung Galaxy A54",
+          "quantity": 1,
+          "price": 1299,
+          "total": 1299
+        }
+      ],
+      "subtotal": 1299,
+      "tax": 233.82,
+      "total": 1532.82,
+      "status": "Completada",
+      "createdAt": "2025-07-16T04:31:18.758Z",
+      "updatedAt": "2025-07-16T04:31:18.769Z",
+      "notes": ""
+    },
+    {
+      "id": "f450",
       "clientId": "client-002",
       "clientName": "Ana Torres SAC",
       "products": [
@@ -902,8 +944,8 @@
       "tax": 449.82,
       "total": 2948.82,
       "status": "Completada",
-      "createdAt": "2025-07-16T02:35:05.461Z",
-      "updatedAt": "2025-07-16T02:35:05.481Z",
+      "createdAt": "2025-07-16T04:31:38.836Z",
+      "updatedAt": "2025-07-16T04:31:38.846Z",
       "notes": ""
     }
   ]

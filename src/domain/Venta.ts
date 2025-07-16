@@ -1,4 +1,3 @@
-
 export class Venta {
   constructor(
     public clientId: string,
@@ -7,7 +6,7 @@ export class Venta {
     public total: number,
     public tax: number,
     public subtotal: number,
-    public status: 'Pendiente' | 'Completada' | 'Cancelada',
+    public status: "Pendiente" | "Completada" | "Cancelada",
     public createdAt: Date,
     public updatedAt: Date,
     public id?: string,
@@ -15,12 +14,10 @@ export class Venta {
   ) {}
 }
 
-export class ItemVenta {
-  constructor(
-    public productId: string,
-    public productName: string,
-    public quantity: number,
-    public price: number,
-    public total: number
-  ) {}
+export interface ItemVenta {
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  total: number;
 }
