@@ -20,16 +20,6 @@
       "isActive": true
     },
     {
-      "id": "3b99",
-      "username": "neison",
-      "email": "neison@gmail.com",
-      "password": "12345",
-      "role": "empleado",
-      "isActive": true,
-      "createdAt": "2025-07-15T04:49:00.341Z",
-      "updatedAt": "2025-07-15T04:49:00.341Z"
-    },
-    {
       "id": "cd66",
       "username": "neison",
       "email": "neisone@gmail.com",
@@ -37,7 +27,17 @@
       "role": "empleado",
       "isActive": true,
       "createdAt": "2025-07-16T03:28:28.467Z",
-      "updatedAt": "2025-07-16T03:28:28.467Z"
+      "updatedAt": "2025-07-19T03:53:18.409Z"
+    },
+    {
+      "id": "a013",
+      "username": "holla",
+      "email": "hoal@gmail.com",
+      "password": "123456",
+      "role": "admin",
+      "createdAt": "2025-07-19T03:56:56.387Z",
+      "isActive": true,
+      "updatedAt": "2025-07-19T03:56:56.387Z"
     }
   ],
   "products": [
@@ -82,11 +82,11 @@
       "name": "Smartphone Samsung Galaxy A54",
       "description": "Celular Samsung con cámara de 50MP y batería de larga duración.",
       "price": 1299,
-      "stock": 27,
+      "stock": 26,
       "category": "Telefonía",
       "sku": "SMART-SAMS-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-16T04:31:18.758Z",
+      "updatedAt": "2025-07-18T23:25:24.393Z",
       "isActive": true
     },
     {
@@ -178,11 +178,11 @@
       "name": "Memoria RAM Corsair Vengeance LPX 16GB",
       "description": "Módulo de RAM DDR4 de 16GB (2x8GB) a 3200MHz.",
       "price": 380,
-      "stock": 15,
+      "stock": 14,
       "category": "Componentes PC",
       "sku": "RAM-CORS-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-15T04:25:33.000Z",
+      "updatedAt": "2025-07-18T23:25:24.378Z",
       "isActive": true
     },
     {
@@ -946,6 +946,34 @@
       "status": "Completada",
       "createdAt": "2025-07-16T04:31:38.836Z",
       "updatedAt": "2025-07-16T04:31:38.846Z",
+      "notes": ""
+    },
+    {
+      "id": "4a69",
+      "clientId": "client-002",
+      "clientName": "Ana Torres SAC",
+      "products": [
+        {
+          "productId": "prod-012",
+          "productName": "Memoria RAM Corsair Vengeance LPX 16GB",
+          "quantity": 1,
+          "price": 380,
+          "total": 380
+        },
+        {
+          "productId": "prod-004",
+          "productName": "Smartphone Samsung Galaxy A54",
+          "quantity": 1,
+          "price": 1299,
+          "total": 1299
+        }
+      ],
+      "subtotal": 1679,
+      "tax": 302.21999999999997,
+      "total": 1981.22,
+      "status": "Completada",
+      "createdAt": "2025-07-18T23:25:24.378Z",
+      "updatedAt": "2025-07-18T23:25:24.404Z",
       "notes": ""
     }
   ]

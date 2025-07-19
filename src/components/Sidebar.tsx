@@ -35,7 +35,7 @@ const BarraLateral: React.FC<PropiedadesBarraLateral> = ({ estaColapsada, alAlte
     { icono: Package, etiqueta: 'Productos', componente: 'products', rolesPermitidos: ['admin'] },
     { icono: Users, etiqueta: 'Clientes', componente: 'clients', rolesPermitidos: ['admin', 'empleado'] },
     { icono: ShoppingCart, etiqueta: 'Ventas', componente: 'sales', rolesPermitidos: ['admin', 'empleado'] },
-    { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin'] }, 
+    { icono: BarChart3, etiqueta: 'Reportes', componente: 'reports', rolesPermitidos: ['admin', 'empleado'] }, 
     { icono: HardHat, etiqueta: 'Empleados', componente: 'addUserForm', rolesPermitidos: ['admin'] },
     { icono: Settings, etiqueta: 'Configuración', componente: 'settings', rolesPermitidos: ['admin', 'empleado'] }
   ];

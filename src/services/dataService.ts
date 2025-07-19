@@ -49,6 +49,13 @@ class DataService {
           ...item,
       };
 
+      
+      if (method === "POST" ) {
+          delete itemToProcess.id; // Elimina el ID del objeto que se enviará en el cuerpo
+      }
+
+
+
       if (itemToProcess.createdAt instanceof Date) {
         itemToProcess.createdAt = itemToProcess.createdAt.toISOString();
       } else if (method === "POST" && !itemToProcess.createdAt) {

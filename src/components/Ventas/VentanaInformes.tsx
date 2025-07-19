@@ -1,426 +1,717 @@
-// src/components/Ventas/VentanaProductos.tsx
-
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { dataService } from '../../services/dataService';
-import { Producto } from '../../domain/Producto';
-import { generarId, formatearMoneda, formatearFecha, validarRequerido, validarNumero } from '../../utils';
-import { Package, Plus, Edit, Trash2, Search, AlertTriangle } from 'lucide-react';
+import { UtilidadesExportacion } from '../../utils/exportUtils';
+import { formatearMoneda, formatearFecha } from '../../utils'; // Importaciones corregidas
+import { BarChart3, TrendingUp, Calendar, DollarSign, Package, Users, ShoppingCart, AlertTriangle, Download, FileSpreadsheet, FileText, FileDown } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
-const VentanaProductos: React.FC = () => {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>([]);
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
-  const [terminoBusqueda, setTerminoBusqueda] = useState('');
-  const [datosFormulario, setDatosFormulario] = useState({
-    nombre: '',
-    descripcion: '',
-    precio: '',
-    stock: '',
-    categoria: '',
-    sku: ''
-  });
-  const [errores, setErrores] = useState<{[key: string]: string}>({});
+// Extender el tipo de jsPDF para incluir autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
-  useEffect(() => {
-    cargarProductos();
-  }, []);
+interface ProductSales {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
 
-  // Efecto para filtrar los productos cada vez que 'productos' o 'terminoBusqueda' cambian
-  useEffect(() => {
-    filtrarProductos();
-  }, [productos, terminoBusqueda]);
+interface LowStockProduct {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+}
 
-  const cargarProductos = () => {
-    const productosCargados = dataService.getProducts();
-    // Asegurarse de que productosCargados sea siempre un arreglo
-    setProductos(Array.isArray(productosCargados) ? productosCargados : []);
-  };
+interface ReportData {
+  totalSales: number;
+  totalRevenue: number;
+  totalProducts: number;
+  totalClients: number;
+  lowStockProducts: LowStockProduct[];
+  topProducts: ProductSales[];
+  recentSales: any[];
+  monthlyRevenue: number;
+  averageOrderValue: number;
+}
 
-  const filtrarProductos = () => {
-    if (!terminoBusqueda) {
-      setProductosFiltrados(productos);
-      return;
-    }
-    const filtrados = productos.filter(producto =>
-      producto.name.toLowerCase().includes(terminoBusqueda.toLowerCase()) ||
-      producto.sku.toLowerCase().includes(terminoBusqueda.toLowerCase()) ||
-      producto.category.toLowerCase().includes(terminoBusqueda.toLowerCase())
-    );
-    setProductosFiltrados(filtrados);
-  };
+const ReportsWindow: React.FC = () => {
+  const { user } = useAuth();
+  const [reportData, setReportData] = useState<ReportData>({
+    totalSales: 0,
+    totalRevenue: 0,
+    totalProducts: 0,
+    totalClients: 0,
+    lowStockProducts: [],
+    topProducts: [],
+    recentSales: [],
+    monthlyRevenue: 0,
+    averageOrderValue: 0
+  });
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Función para reiniciar el formulario a sus valores iniciales
-  const resetearFormulario = () => {
-    setDatosFormulario({
-      nombre: '',
-      descripcion: '',
-      precio: '',
-      stock: '',
-      categoria: '',
-      sku: ''
-    });
-    setErrores({});
-    setProductoEditando(null); 
-  };
+  // Verificar si el usuario es empleado, auxiliar o administrador
+  const isEmployeeOrAuxiliar = user?.role === 'empleado' 
+  const isAdmin = user?.role === 'admin';
 
-  const validarFormulario = (): boolean => {
-    const nuevosErrores: {[key: string]: string} = {};
-    if (!validarRequerido(datosFormulario.nombre)) { 
-      nuevosErrores.nombre = 'El nombre es requerido';
-    }
-    if (!validarRequerido(datosFormulario.descripcion)) { 
-      nuevosErrores.descripcion = 'La descripción es requerida';
-    }
-    if (!validarNumero(datosFormulario.precio) || Number(datosFormulario.precio) <= 0) { 
-      nuevosErrores.precio = 'El precio debe ser un número mayor a 0';
-    }
-    if (!validarNumero(datosFormulario.stock) || Number(datosFormulario.stock) < 0) {
-      nuevosErrores.stock = 'El stock debe ser un número mayor o igual a 0';
-    }
-    if (!validarRequerido(datosFormulario.categoria)) { 
-      nuevosErrores.categoria = 'La categoría es requerida';
-    }
+  useEffect(() => {
+    // Si el usuario no tiene permisos para ver ningún reporte, no intentes generarlos
+    if (!isEmployeeOrAuxiliar && !isAdmin) {
+      return;
+    }
+    generateReports();
+  }, [user?.role]); // Regenerar reportes si el rol del usuario cambia
 
-    if (!validarRequerido(datosFormulario.sku)) { 
-      nuevosErrores.sku = 'El SKU es requerido';
-    }
-    const skuExistente = productos.find(p =>
-      p.sku === datosFormulario.sku && (!productoEditando || p.id !== productoEditando.id)
-    );
-    if (skuExistente) {
-      nuevosErrores.sku = 'Este SKU ya existe';
-    }
+  const generateReports = async () => {
+    try {
+      // Obtenemos los datos de forma asíncrona, usando Promise.all para eficiencia
+      const [products, clients, sales] = await Promise.all([
+        dataService.getProducts(),
+        dataService.getClients(),
+        dataService.getSales()
+      ]);
 
-    setErrores(nuevosErrores); 
-    return Object.keys(nuevosErrores).length === 0;
-  };
+      // Estadísticas básicas
+      const totalSales = sales.length;
+      const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+      const totalProducts = products.length;
+      const totalClients = clients.length;
 
-  // Manejar el envío del formulario
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+      // Productos con stock bajo (menos de 10 unidades)
+      const lowStockProducts: LowStockProduct[] = products
+        .filter(product => product.stock < 10)
+        .sort((a, b) => a.stock - b.stock)
+        .slice(0, 10)
+        .map(product => ({
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          stock: product.stock
+        }));
 
-    // Si la validación falla, detener el envío
-    if (!validarFormulario()) return;
+      // Productos más vendidos
+      const productSalesMap: { [key: string]: ProductSales } = {};
 
-    // Crear el objeto producto con los datos del formulario
-    const datosProducto: Producto = {
-      id: productoEditando?.id || generarId(), // Usar ID existente o generar uno nuevo con generarId
-      name: datosFormulario.nombre,
-      description: datosFormulario.descripcion,
-      price: Number(datosFormulario.precio),
-      stock: Number(datosFormulario.stock),
-      category: datosFormulario.categoria,
-      sku: datosFormulario.sku,
-      createdAt: productoEditando?.createdAt || new Date(), 
-      updatedAt: new Date(),
-      isActive: true
-    };
+      sales.forEach(sale => {
+        sale.products.forEach(item => {
+          if (!productSalesMap[item.productId]) {
+            productSalesMap[item.productId] = {
+              name: item.productName,
+              quantity: 0,
+              revenue: 0
+            };
+          }
+          productSalesMap[item.productId].quantity += item.quantity;
+          productSalesMap[item.productId].revenue += item.total;
+        });
+      });
 
-    // Guardar el producto usando el servicio de datos
-    dataService.saveProduct(datosProducto);
-    cargarProductos(); // Recargar la lista de productos
-    setMostrarFormulario(false); // Ocultar el formulario
-    resetearFormulario(); // Resetear el formulario
-  };
+      const topProducts: ProductSales[] = Object.values(productSalesMap)
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
 
-  // Manejar la edición de un producto
-  const manejarEdicion = (producto: Producto) => {
-    setProductoEditando(producto); 
-    // Llenar el formulario con los datos del producto
-    setDatosFormulario({
-      nombre: producto.name,
-      descripcion: producto.description,
-      precio: producto.price.toString(),
-      stock: producto.stock.toString(),
-      categoria: producto.category,
-      sku: producto.sku
-    });
-    setMostrarFormulario(true); // Mostrar el formulario
-  };
+      // Ventas recientes (las 10 más recientes)
+      const recentSales = sales
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
 
-  // Manejar la eliminación de un producto
-  const manejarEliminacion = (producto: Producto) => {
-    if (window.confirm(`¿Estás seguro de eliminar el producto "${producto.name}"?`)) {
-      dataService.deleteProduct(producto.id); 
-      cargarProductos(); 
-    }
-  };
+      // Ingresos del mes actual
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      const monthlyRevenue = sales
+        .filter(sale => {
+          const saleDate = new Date(sale.createdAt);
+          return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+        })
+        .reduce((sum, sale) => sum + sale.total, 0);
 
-  // Manejar cambios en los campos del formulario
-  const manejarCambioInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setDatosFormulario(prev => ({ ...prev, [name]: value }));
-    if (errores[name]) {
-      setErrores(prev => ({ ...prev, [name]: '' }));
-    }
-  };
+      // Valor promedio del pedido
+      const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-  // Renderizado condicional: si mostrarFormulario es true, mostrar el formulario
-  if (mostrarFormulario) {
-    return (
-      <div className="fade-in">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>
-            <Package className="me-2" />
-            {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
-          </h4>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setMostrarFormulario(false); 
-              resetearFormulario(); 
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
+      setReportData({
+        totalSales,
+        totalRevenue,
+        totalProducts,
+        totalClients,
+        lowStockProducts,
+        topProducts,
+        recentSales,
+        monthlyRevenue,
+        averageOrderValue
+      });
+    } catch (error) {
+      console.error('Error al generar los reportes:', error);
+      // Opcional: mostrar un mensaje al usuario
+    }
+  };
 
-        <form onSubmit={handleSubmit}>
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.nombre ? 'is-invalid' : ''}`}
-                  id="nombre"
-                  name="nombre"
-                  placeholder="Nombre del producto"
-                  value={datosFormulario.nombre}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="nombre">Nombre del producto</label>
-                {errores.nombre && <div className="invalid-feedback">{errores.nombre}</div>}
-              </div>
-            </div>
+  const handleExport = async (type: 'products' | 'clients' | 'sales' | 'complete', format: 'excel' | 'pdf') => {
+    setIsExporting(true);
 
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.sku ? 'is-invalid' : ''}`}
-                  id="sku"
-                  name="sku"
-                  placeholder="SKU"
-                  value={datosFormulario.sku}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="sku">SKU</label>
-                {errores.sku && <div className="invalid-feedback">{errores.sku}</div>}
-              </div>
-            </div>
-          </div>
+    try {
+      // Obtenemos los datos de forma asíncrona para la exportación
+      const [products, clients, sales] = await Promise.all([
+        dataService.getProducts(),
+        dataService.getClients(),
+        dataService.getSales()
+      ]);
 
-          <div className="form-floating mb-3">
-            <textarea
-              className={`form-control ${errores.descripcion ? 'is-invalid' : ''}`}
-              id="descripcion"
-              name="descripcion"
-              placeholder="Descripción"
-              style={{ height: '100px' }}
-              value={datosFormulario.descripcion}
-              onChange={manejarCambioInput}
-            />
-            <label htmlFor="descripcion">Descripción</label>
-            {errores.descripcion && <div className="invalid-feedback">{errores.descripcion}</div>}
-          </div>
+      switch (type) {
+        case 'products':
+          UtilidadesExportacion.exportarReporteProductos(products, format);
+          break;
+        case 'clients':
+          UtilidadesExportacion.exportarReporteClientes(clients, format);
+          break;
+        case 'sales':
+          UtilidadesExportacion.exportarReporteVentas(sales, format);
+          break;
+        case 'complete':
+          UtilidadesExportacion.exportarReporteCompleto(products, clients, sales, format);
+          break;
+      }
 
-          <div className="row">
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="number"
-                  step="0.01"
-                  className={`form-control ${errores.precio ? 'is-invalid' : ''}`}
-                  id="precio"
-                  name="precio"
-                  placeholder="Precio"
-                  value={datosFormulario.precio}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="precio">Precio</label>
-                {errores.precio && <div className="invalid-feedback">{errores.precio}</div>}
-              </div>
-            </div>
+      const formatName = format === 'excel' ? 'Excel' : 'PDF';
+      const typeName = type === 'complete' ? 'completo' :
+                       type === 'products' ? 'de productos' :
+                       type === 'clients' ? 'de clientes' : 'de ventas';
 
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="number"
-                  className={`form-control ${errores.stock ? 'is-invalid' : ''}`}
-                  id="stock"
-                  name="stock"
-                  placeholder="Stock"
-                  value={datosFormulario.stock}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="stock">Stock</label>
-                {errores.stock && <div className="invalid-feedback">{errores.stock}</div>}
-              </div>
-            </div>
+      alert(`✅ Reporte ${typeName} exportado exitosamente en formato ${formatName}`);
 
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.categoria ? 'is-invalid' : ''}`}
-                  id="categoria"
-                  name="categoria"
-                  placeholder="Categoría"
-                  value={datosFormulario.categoria}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="categoria">Categoría</label>
-                {errores.categoria && <div className="invalid-feedback">{errores.categoria}</div>}
-              </div>
-            </div>
-          </div>
+    } catch (error) {
+      console.error('Error al exportar el reporte:', error);
+      alert('❌ Error al exportar el reporte. Por favor, intenta nuevamente.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
-          <div className="d-flex gap-2">
-            <button type="submit" className="btn btn-gradient">
-              {productoEditando ? 'Actualizar' : 'Guardar'} Producto
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setMostrarFormulario(false);
-                resetearFormulario(); 
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
+//  FUNCIoN para generar boleta desde reports
+  const handleGenerateReceipt = async (sale: any) => {
+    try {
+      // Necesitamos cargar los datos de productos y clientes para la boleta
+      const products = await dataService.getProducts();
+      const clients = await dataService.getClients();
+        //  Buscar el cliente específico de la venta dentro del array 'allClients'
+      const clientForSale = clients.find(c => c.id === sale.clientId);
 
-  // Renderizado cuando el formulario no está visible (vista de tabla)
-  return (
-    <div className="fade-in">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h4>
-          <Package className="me-2" />
-          Gestión de Productos
-        </h4>
-        <button
-          className="btn btn-gradient"
-          onClick={() => setMostrarFormulario(true)} // Mostrar formulario al hacer clic
-        >
-          <Plus size={18} className="me-2" />
-          Nuevo Producto
-        </button>
-      </div>
+      if (!clientForSale) {
+        alert('No se pudo encontrar la información del cliente para esta venta.');
+        return;
+      }
+      await UtilidadesExportacion.generarBoletaVentaPDF(sale, products, clientForSale);
+      alert(`Boleta para venta #${sale.id} generada exitosamente.`);
+    } catch (error) {
+      console.error('Error al generar la boleta desde reportes:', error);
+      alert('Hubo un error al generar la boleta. Verifique que la venta sea válida.');
+    }
+  };
 
-      <div className="row mb-4">
-        <div className="col-md-6">
-          <div className="input-group">
-            <span className="input-group-text">
-              <Search size={18} />
-            </span>
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Buscar productos..."
-              value={terminoBusqueda}
-              onChange={(e) => setTerminoBusqueda(e.target.value)} // Actualizar término de búsqueda
-            />
-          </div>
-        </div>
-        <div className="col-md-6">
-          <div className="text-end">
-            <span className="text-muted">
-              {productosFiltrados.length} de {productos.length} productos
-            </span>
-          </div>
-        </div>
-      </div>
+  // Renderizado condicional basado en el rol del usuario
+  if (isEmployeeOrAuxiliar) {
+    return (
+      <div className="fade-in">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4>
+            <BarChart3 className="me-2" />
+            Reportes - Vista Empleado
+          </h4>
+          <span className="badge bg-info">
+            <Users size={16} className="me-1" />
+            Acceso Limitado
+          </span>
+        </div>
 
-      <div className="table-responsive">
-        <table className="table table-modern">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Estado</th>
-              <th>Fecha</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productosFiltrados.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-4">
-                  <div className="text-muted">
-                    <Package size={48} className="mb-2 opacity-50" />
-                    <p>No se encontraron productos</p>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              productosFiltrados.map((producto) => (
-                <tr key={producto.id}>
-                    <td>
-                    <code>{producto.sku}</code>
-                  </td>
-                  <td>
-                    <div>
-                      <strong>{producto.name}</strong>
-                      <br />
-                      <small className="text-muted">{producto.description}</small>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge bg-info">{producto.category}</span>
-                  </td>
-                  <td>{formatearMoneda(producto.price)}</td>
-                  <td>
-                    <div className="d-flex align-items-center">
-                      <span className={producto.stock < 10 ? 'text-warning fw-bold' : ''}>
-                        {producto.stock}
-                      </span>
-                      {producto.stock < 10 && (
-                        <AlertTriangle size={16} className="text-warning ms-1" />
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`status-badge ${producto.isActive ? 'status-active' : 'status-inactive'}`}>
-                      {producto.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td>
-                    <small>{formatearFecha(producto.createdAt)}</small>
-                  </td>
-                  <td>
-                    <div className="btn-group">
-                      <button
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => manejarEdicion(producto)}
-                        title="Editar"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => manejarEliminacion(producto)}
-                        title="Eliminar"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+        <div className="row mb-4">
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-header bg-warning text-white">
+                <h6 className="mb-0">
+                  <AlertTriangle className="me-2" size={18} />
+                  Productos con Stock Bajo
+                </h6>
+              </div>
+              <div className="card-body">
+                {reportData.lowStockProducts.length === 0 ? (
+                  <p className="text-muted text-center">¡Todos los productos tienen stock suficiente!</p>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {reportData.lowStockProducts.slice(0, 5).map((product, index) => (
+                      <div key={product.id} className="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                          <strong>{product.name}</strong>
+                          <br />
+                          <small className="text-muted">{product.sku}</small>
+                        </div>
+                        <span className={`badge ${product.stock === 0 ? 'bg-danger' : 'bg-warning'}`}>
+                          {product.stock} unidades
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-header bg-success text-white">
+                <h6 className="mb-0">
+                  <TrendingUp className="me-2" size={18} />
+                  Productos Más Vendidos
+                </h6>
+              </div>
+              <div className="card-body">
+                {reportData.topProducts.length === 0 ? (
+                  <p className="text-muted text-center">No hay datos de ventas disponibles</p>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {reportData.topProducts.map((product, index) => (
+                      <div key={`${product.name}-${index}`} className="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                          <span className="badge bg-primary me-2">{index + 1}</span>
+                          <strong>{product.name}</strong>
+                        </div>
+                        <div className="text-end">
+                          <div><strong>{product.quantity} vendidos</strong></div>
+                          <small className="text-muted">{formatearMoneda(product.revenue)}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="row">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header bg-info text-white">
+                <h6 className="mb-0">
+                  <Calendar className="me-2" size={18} />
+                  Ventas Recientes
+                  <span className="badge bg-light text-dark ms-2">Generar Boletas</span>
+                </h6>
+              </div>
+              <div className="card-body">
+                {reportData.recentSales.length === 0 ? (
+                  <p className="text-muted text-center">No hay ventas recientes</p>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {reportData.recentSales.slice(0, 8).map((sale, index) => (
+                      <div key={sale.id} className="list-group-item px-0">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{sale.clientName}</strong>
+                            <br />
+                            <small className="text-muted">
+                              {sale.products.length} producto(s) - {formatearFecha(sale.createdAt)}
+                            </small>
+                          </div>
+                          <div className="text-end">
+                            <div><strong>{formatearMoneda(sale.total)}</strong></div>
+                            <button
+                              className="btn btn-sm btn-primary mt-1"
+                              onClick={() => handleGenerateReceipt(sale)}
+                              title="Generar boleta PDF"
+                            >
+                              <FileDown size={14} className="me-1" />
+                              Generar Boleta
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista para ADMINISTRADOR (completa)
+  if (isAdmin) {
+    return (
+      <div className="fade-in">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4>
+            <BarChart3 className="me-2" />
+            Reportes y Análisis
+          </h4>
+          <button className="btn btn-outline-primary" onClick={generateReports}>
+            <TrendingUp size={18} className="me-2" />
+            Actualizar Reportes
+          </button>
+        </div>
+
+        {/* Tarjetas de Resumen */}
+        <div className="row mb-4">
+          <div className="col-md-3">
+            <div className="card text-center">
+              <div className="card-body">
+                <div className="text-primary mb-2">
+                  <DollarSign size={32} />
+                </div>
+                <h5 className="card-title">{formatearMoneda(reportData.totalRevenue)}</h5>
+                <p className="card-text text-muted">Ingresos Totales</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3">
+            <div className="card text-center">
+              <div className="card-body">
+                <div className="text-success mb-2">
+                  <ShoppingCart size={32} />
+                </div>
+                <h5 className="card-title">{reportData.totalSales}</h5>
+                <p className="card-text text-muted">Ventas Totales</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3">
+            <div className="card text-center">
+              <div className="card-body">
+                <div className="text-warning mb-2">
+                  <Package size={32} />
+                </div>
+                <h5 className="card-title">{reportData.totalProducts}</h5>
+                <p className="card-text text-muted">Productos</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-3">
+            <div className="card text-center">
+              <div className="card-body">
+                <div className="text-info mb-2">
+                  <Users size={32} />
+                </div>
+                <h5 className="card-title">{reportData.totalClients}</h5>
+                <p className="card-text text-muted">Clientes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rendimiento Mensual */}
+        <div className="row mb-4">
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-header bg-primary text-white">
+                <h6 className="mb-0">
+                  <Calendar className="me-2" size={18} />
+                  Rendimiento del Mes
+                </h6>
+              </div>
+              <div className="card-body">
+                <div className="row text-center">
+                  <div className="col-6">
+                    <h4 className="text-primary">{formatearMoneda(reportData.monthlyRevenue)}</h4>
+                    <p className="text-muted mb-0">Ingresos del Mes</p>
+                  </div>
+                  <div className="col-6">
+                    <h4 className="text-success">{formatearMoneda(reportData.averageOrderValue)}</h4>
+                    <p className="text-muted mb-0">Ticket Promedio</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Reportes de Productos y Ventas */}
+        <div className="row mb-4">
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-header bg-warning text-white">
+                <h6 className="mb-0">
+                  <AlertTriangle className="me-2" size={18} />
+                  Productos con Stock Bajo
+                </h6>
+              </div>
+              <div className="card-body">
+                {reportData.lowStockProducts.length === 0 ? (
+                  <p className="text-muted text-center">¡Todos los productos tienen stock suficiente!</p>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {reportData.lowStockProducts.slice(0, 5).map((product, index) => (
+                      <div key={product.id} className="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                          <strong>{product.name}</strong>
+                          <br />
+                          <small className="text-muted">{product.sku}</small>
+                        </div>
+                        <span className={`badge ${product.stock === 0 ? 'bg-danger' : 'bg-warning'}`}>
+                          {product.stock} unidades
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <div className="card">
+              <div className="card-header bg-success text-white">
+                <h6 className="mb-0">
+                  <TrendingUp className="me-2" size={18} />
+                  Productos Más Vendidos
+                </h6>
+              </div>
+              <div className="card-body">
+                {reportData.topProducts.length === 0 ? (
+                  <p className="text-muted text-center">No hay datos de ventas disponibles</p>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {reportData.topProducts.map((product, index) => (
+                      <div key={`${product.name}-${index}`} className="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                          <span className="badge bg-primary me-2">{index + 1}</span>
+                          <strong>{product.name}</strong>
+                        </div>
+                        <div className="text-end">
+                          <div><strong>{product.quantity} vendidos</strong></div>
+                          <small className="text-muted">{formatearMoneda(product.revenue)}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Ventas Recientes con Botón de Boleta */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header bg-info text-white">
+                <h6 className="mb-0">
+                  <Calendar className="me-2" size={18} />
+                  Ventas Recientes
+                </h6>
+              </div>
+              <div className="card-body">
+                {reportData.recentSales.length === 0 ? (
+                  <p className="text-muted text-center">No hay ventas recientes</p>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {reportData.recentSales.slice(0, 8).map((sale, index) => (
+                      <div key={sale.id} className="list-group-item px-0">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{sale.clientName}</strong>
+                            <br />
+                            <small className="text-muted">
+                              {sale.products.length} producto(s)
+                            </small>
+                          </div>
+                          <div className="text-end">
+                            <div><strong>{formatearMoneda(sale.total)}</strong></div>
+                            <small className="text-muted">{formatearFecha(sale.createdAt)}</small>
+                          </div>
+                          <button
+                            className="btn btn-sm btn-outline-primary ms-2"
+                            onClick={() => handleGenerateReceipt(sale)}
+                            title="Generar boleta PDF"
+                          >
+                            <FileDown size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Opciones de Exportación */}
+        <div className="card">
+          <div className="card-header">
+            <h6 className="mb-0">
+              <Download className="me-2" size={18} />
+              Exportar Reportes
+            </h6>
+          </div>
+          <div className="card-body">
+            <div className="row">
+              <div className="col-md-8">
+                <p className="text-muted mb-3">
+                  Genera reportes detallados para análisis financiero y de inventario.
+                  Los reportes incluyen datos de ventas, productos más vendidos, y análisis de clientes.
+                </p>
+
+                <div className="row g-3">
+                  {/* Reporte de Productos */}
+                  <div className="col-md-6">
+                    <div className="card border">
+                      <div className="card-body text-center">
+                        <Package className="text-primary mb-2" size={32} />
+                        <h6>Reporte de Productos</h6>
+                        <div className="btn-group w-100" role="group">
+                          <button
+                            className="btn btn-outline-success btn-sm"
+                            onClick={() => handleExport('products', 'excel')}
+                            disabled={isExporting}
+                          >
+                            <FileSpreadsheet size={16} className="me-1" />
+                            Excel
+                          </button>
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => handleExport('products', 'pdf')}
+                            disabled={isExporting}
+                          >
+                            <FileText size={16} className="me-1" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reporte de Clientes */}
+                  <div className="col-md-6">
+                    <div className="card border">
+                      <div className="card-body text-center">
+                        <Users className="text-success mb-2" size={32} />
+                        <h6>Reporte de Clientes</h6>
+                        <div className="btn-group w-100" role="group">
+                          <button
+                            className="btn btn-outline-success btn-sm"
+                            onClick={() => handleExport('clients', 'excel')}
+                            disabled={isExporting}
+                          >
+                            <FileSpreadsheet size={16} className="me-1" />
+                            Excel
+                          </button>
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => handleExport('clients', 'pdf')}
+                            disabled={isExporting}
+                          >
+                            <FileText size={16} className="me-1" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reporte de Ventas */}
+                  <div className="col-md-6">
+                    <div className="card border">
+                      <div className="card-body text-center">
+                        <ShoppingCart className="text-warning mb-2" size={32} />
+                        <h6>Reporte de Ventas</h6>
+                        <div className="btn-group w-100" role="group">
+                          <button
+                            className="btn btn-outline-success btn-sm"
+                            onClick={() => handleExport('sales', 'excel')}
+                            disabled={isExporting}
+                          >
+                            <FileSpreadsheet size={16} className="me-1" />
+                            Excel
+                          </button>
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => handleExport('sales', 'pdf')}
+                            disabled={isExporting}
+                          >
+                            <FileText size={16} className="me-1" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reporte Completo */}
+                  <div className="col-md-6">
+                    <div className="card border border-primary">
+                      <div className="card-body text-center">
+                        <BarChart3 className="text-info mb-2" size={32} />
+                        <h6>Reporte Completo</h6>
+                        <div className="btn-group w-100" role="group">
+                          <button
+                            className="btn btn-success btn-sm"
+                            onClick={() => handleExport('complete', 'excel')}
+                            disabled={isExporting}
+                          >
+                            <FileSpreadsheet size={16} className="me-1" />
+                            Excel
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleExport('complete', 'pdf')}
+                            disabled={isExporting}
+                          >
+                            <FileText size={16} className="me-1" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-md-4">
+                <div className="card bg-light">
+                  <div className="card-body">
+                    <h6 className="card-title">
+                      <TrendingUp className="me-2" size={18} />
+                      Estado de Exportación
+                    </h6>
+                    {isExporting ? (
+                      <div className="text-center">
+                        <div className="spinner-border text-primary mb-2" role="status">
+                          <span className="visually-hidden">Exportando...</span>
+                        </div>
+                        <p className="text-muted">Generando reporte...</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-muted small">
+                          ✅ Sistema listo para exportar<br />
+                          📊 {reportData.totalProducts} productos<br />
+                          👥 {reportData.totalClients} clientes<br />
+                          💰 {reportData.totalSales} ventas
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Si el usuario no tiene rol o no tiene permisos, muestra un mensaje de acceso denegado
+  return (
+    <div className="fade-in text-center p-5">
+      <h4 className="text-danger mb-3">Acceso Denegado</h4>
+      <p className="text-muted">No tienes los permisos necesarios para ver esta sección de reportes.</p>
+    </div>
+  );
 };
 
-export default VentanaProductos;
+export default ReportsWindow;
