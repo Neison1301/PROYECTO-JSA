@@ -1,4 +1,4 @@
-# 🖥️ Sistema de Gestión de Inventario Tecnológico
+# Sistema de Gestión de Inventario Tecnológico
 
 > **Software personalizado para la gestión integral de artículos tecnológicos**
 
@@ -19,10 +19,9 @@ Un sistema completo desarrollado con React y Vite para gestionar inventarios, ve
 
 ## Tecnologías
 
-- **React 18+** con Vite
+- **React** con Vite
 - **Tailwind CSS** para estilos modernos
 - **JSON Server** como base de datos local
-- **React Router** para navegación
 
 ## Requisitos Previos
 
