@@ -8,7 +8,7 @@
       "role": "admin",
       "createdAt": "2025-07-15T04:25:33.000Z",
       "isActive": true,
-      "updatedAt": "2025-07-15T05:13:42.935Z"
+      "updatedAt": "2025-07-19T05:23:00.625Z"
     },
     {
       "id": "user-recep-001",
@@ -17,27 +17,18 @@
       "password": "empleado123",
       "role": "empleado",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "isActive": true
+      "isActive": true,
+      "updatedAt": "2025-07-19T18:50:02.793Z"
     },
     {
       "id": "cd66",
       "username": "neison",
-      "email": "neisone@gmail.com",
-      "password": "123456",
+      "email": "neison@gmail.com",
+      "password": "1234567",
       "role": "empleado",
       "isActive": true,
       "createdAt": "2025-07-16T03:28:28.467Z",
-      "updatedAt": "2025-07-19T03:53:18.409Z"
-    },
-    {
-      "id": "a013",
-      "username": "holla",
-      "email": "hoal@gmail.com",
-      "password": "123456",
-      "role": "admin",
-      "createdAt": "2025-07-19T03:56:56.387Z",
-      "isActive": true,
-      "updatedAt": "2025-07-19T03:56:56.387Z"
+      "updatedAt": "2025-07-19T18:51:29.720Z"
     }
   ],
   "products": [
@@ -70,11 +61,11 @@
       "name": "Smart TV LG 55 pulgadas 4K",
       "description": "Televisor inteligente LG con resolución 4K y webOS.",
       "price": 2499,
-      "stock": 3,
+      "stock": 2,
       "category": "Electrónica",
       "sku": "TV-LG-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-16T04:31:38.836Z",
+      "updatedAt": "2025-07-19T05:10:52.152Z",
       "isActive": true
     },
     {
@@ -142,11 +133,11 @@
       "name": "Parlante Bluetooth JBL Flip 5",
       "description": "Parlante portátil con sonido potente y resistencia al agua.",
       "price": 280,
-      "stock": 35,
+      "stock": 34,
       "category": "Audio",
       "sku": "PARL-JBL-001",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-15T04:25:33.000Z",
+      "updatedAt": "2025-07-19T04:46:06.664Z",
       "isActive": true
     },
     {
@@ -238,11 +229,11 @@
       "name": "Monitor Curvo Samsung 27''",
       "description": "Monitor LED curvo Full HD con tasa de refresco de 75Hz.",
       "price": 850,
-      "stock": 25,
+      "stock": 24,
       "category": "Monitores",
       "sku": "MON-SAMS-001",
       "createdAt": "2025-07-15T05:22:45.000Z",
-      "updatedAt": "2025-07-15T05:22:45.000Z",
+      "updatedAt": "2025-07-19T04:40:47.512Z",
       "isActive": true
     },
     {
@@ -851,12 +842,12 @@
       "id": "client-001",
       "name": "Carlos Vargas",
       "email": "carlos.vargas@gmail.com",
-      "phone": "987654321",
+      "phone": "987654322",
       "address": "Av. La Molina 123, La Molina",
       "city": "Lima",
       "taxId": "10745678901",
       "createdAt": "2025-07-15T04:25:33.000Z",
-      "updatedAt": "2025-07-15T04:58:39.412Z",
+      "updatedAt": "2025-07-20T17:51:25.343Z",
       "isActive": true
     },
     {
@@ -886,51 +877,30 @@
   ],
   "sales": [
     {
-      "id": "016e",
+      "id": "c1cb",
       "clientId": "client-002",
       "clientName": "Ana Torres SAC",
       "products": [
         {
-          "productId": "prod-002",
-          "productName": "Audífonos Bluetooth Xiaomi",
+          "productId": "prod-009",
+          "productName": "Parlante Bluetooth JBL Flip 5",
           "quantity": 1,
-          "price": 89.9,
-          "total": 89.9
+          "price": 280,
+          "total": 280
         }
       ],
-      "subtotal": 89.9,
-      "tax": 16.182000000000002,
-      "total": 106.08200000000001,
+      "subtotal": 280,
+      "tax": 50.4,
+      "total": 330.4,
       "status": "Completada",
-      "createdAt": "2025-07-16T04:30:23.133Z",
-      "updatedAt": "2025-07-16T04:30:23.144Z",
+      "createdAt": "2025-07-19T04:46:06.664Z",
+      "updatedAt": "2025-07-19T04:46:06.675Z",
       "notes": ""
     },
     {
-      "id": "4d89",
-      "clientId": "client-002",
-      "clientName": "Ana Torres SAC",
-      "products": [
-        {
-          "productId": "prod-004",
-          "productName": "Smartphone Samsung Galaxy A54",
-          "quantity": 1,
-          "price": 1299,
-          "total": 1299
-        }
-      ],
-      "subtotal": 1299,
-      "tax": 233.82,
-      "total": 1532.82,
-      "status": "Completada",
-      "createdAt": "2025-07-16T04:31:18.758Z",
-      "updatedAt": "2025-07-16T04:31:18.769Z",
-      "notes": ""
-    },
-    {
-      "id": "f450",
-      "clientId": "client-002",
-      "clientName": "Ana Torres SAC",
+      "id": "7a7d",
+      "clientId": "client-001",
+      "clientName": "Carlos Vargas",
       "products": [
         {
           "productId": "prod-003",
@@ -944,36 +914,8 @@
       "tax": 449.82,
       "total": 2948.82,
       "status": "Completada",
-      "createdAt": "2025-07-16T04:31:38.836Z",
-      "updatedAt": "2025-07-16T04:31:38.846Z",
-      "notes": ""
-    },
-    {
-      "id": "4a69",
-      "clientId": "client-002",
-      "clientName": "Ana Torres SAC",
-      "products": [
-        {
-          "productId": "prod-012",
-          "productName": "Memoria RAM Corsair Vengeance LPX 16GB",
-          "quantity": 1,
-          "price": 380,
-          "total": 380
-        },
-        {
-          "productId": "prod-004",
-          "productName": "Smartphone Samsung Galaxy A54",
-          "quantity": 1,
-          "price": 1299,
-          "total": 1299
-        }
-      ],
-      "subtotal": 1679,
-      "tax": 302.21999999999997,
-      "total": 1981.22,
-      "status": "Completada",
-      "createdAt": "2025-07-18T23:25:24.378Z",
-      "updatedAt": "2025-07-18T23:25:24.404Z",
+      "createdAt": "2025-07-19T05:10:52.152Z",
+      "updatedAt": "2025-07-19T05:10:52.166Z",
       "notes": ""
     }
   ]

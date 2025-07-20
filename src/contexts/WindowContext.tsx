@@ -18,7 +18,7 @@ const WindowContext = createContext<WindowContextType | undefined>(undefined);
 const useWindows = () => {
   const context = useContext(WindowContext);
   if (context === undefined) {
-    throw new Error('useWindows must be used within a WindowProvider');
+    throw new Error('error');
   }
   return context;
 };

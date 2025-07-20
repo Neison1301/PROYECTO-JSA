@@ -1,5 +1,5 @@
-class StorageService {
-  private prefix = 'bms_'; // Prefijo para las claves en localStorage
+/*class Almacenamiento {
+  private prefix = 'bms_'; 
 
   setItem<T>(key: string, value: T): void {
     try {
@@ -12,9 +12,9 @@ class StorageService {
         return val;
       });
       localStorage.setItem(this.prefix + key, serializedValue); // Guarda el valor en localStorage
-      console.log(`✅ Guardado en localStorage: ${this.prefix + key}`, value);
+      console.log(`Guardado en localStorage: ${this.prefix + key}`, value);
     } catch (error) {
-      console.error('❌ Error al guardar en localStorage:', error);
+      console.error('Error al guardar en localStorage:', error);
     }
   }
 
@@ -22,7 +22,6 @@ class StorageService {
     try {
       const item = localStorage.getItem(this.prefix + key); // Obtiene el ítem de localStorage
       if (!item) {
-        console.log(`⚠️ No se encontraron datos para la clave: ${this.prefix + key}`);
         return null; 
       }
       
@@ -35,17 +34,16 @@ class StorageService {
         return val;
       });
       
-      console.log(`✅ Recuperado de localStorage: ${this.prefix + key}`, parsed);
+      console.log(`Recuperado de localStorage: ${this.prefix + key}`, parsed);
       return parsed;
     } catch (error) {
-      console.error('❌ Error al leer de localStorage:', error);
+      console.error('Error al leer de localStorage:', error);
       return null; 
     }
   }
 
   removeItem(key: string): void {
     localStorage.removeItem(this.prefix + key); // Elimina un ítem de localStorage
-    console.log(`🗑️ Eliminado de localStorage: ${this.prefix + key}`);
   }
 
   clear(): void {
@@ -53,7 +51,7 @@ class StorageService {
     keys.forEach(key => {
       if (key.startsWith(this.prefix)) { 
         localStorage.removeItem(key);
-        console.log(`🗑️ Limpiado: ${key}`);
+        console.log(`Limpiado: ${key}`);
       }
     });
   }
@@ -73,4 +71,5 @@ class StorageService {
   }
 }
 
-export const storage = new StorageService();
+export const storage = new Almacenamiento();
+*/

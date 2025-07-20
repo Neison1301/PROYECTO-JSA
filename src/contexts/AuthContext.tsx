@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Autenticación } from '../domain/Usuario';
+import { Autenticación, User } from '../domain/Usuario';
 import { authService } from '../services/authService';
-import { storage } from '../services/almacenamiento'; 
 
 interface AuthContextType extends Autenticación {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
+  updateUserProfile: (userId: string, updates: Partial<User>) => Promise<boolean>;
+  changeUserPassword: (userId: string, currentPass: string, newPass: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,37 +24,56 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  // Estado de autenticación
   const [authState, setAuthState] = useState<Autenticación>({
     isAuthenticated: false,
     user: null
   });
 
-  // Este useEffect se ejecuta una vez al montar para inicializar el estado de auth
+  // Inicializa el estado de autenticación al montar
   useEffect(() => {
-    // authService.getAuthState() es síncrono, por lo que no necesita await
     const currentAuthState = authService.getAuthState();
     setAuthState(currentAuthState);
-  }, []); // El array vacío asegura que se ejecute solo al montar
+  }, []);
 
-  // La función login del contexto debe ser asíncrona para esperar el resultado del servicio
+  // Realiza el inicio de sesión
   const login = async (username: string, password: string): Promise<boolean> => {
-    // ¡AQUÍ ESTÁ EL CAMBIO CLAVE! Usa 'await' para esperar la resolución de la promesa
-    const result = await authService.login(username, password); 
-    setAuthState(result); // Ahora 'result' es el objeto AuthState resuelto
-    return result.isAuthenticated; // Retorna el booleano
+    const result = await authService.login(username, password);
+    setAuthState(result);
+    return result.isAuthenticated;
   };
 
+  // Cierra la sesión
   const logout = () => {
     authService.logout();
-    storage.removeItem('currentUser'); 
-    storage.removeItem('windows'); 
-    setAuthState({ isAuthenticated: false, user: null }); // Limpia el estado del contexto
+    setAuthState({ isAuthenticated: false, user: null });
   };
 
+  // Actualiza el perfil del usuario
+  const updateUserProfile = async (userId: string, updates: Partial<User>): Promise<boolean> => {
+    const success = await authService.updateProfile(userId, updates);
+    if (success) {
+      setAuthState(authService.getAuthState());
+    }
+    return success;
+  };
+
+  // Cambia la contraseña del usuario
+  const changeUserPassword = async (userId: string, currentPass: string, newPass: string): Promise<boolean> => {
+    const success = await authService.changePassword(userId, currentPass, newPass);
+    if (success) {
+      setAuthState(authService.getAuthState());
+    }
+    return success;
+  };
+
+  // Valor del contexto de autenticación
   const value: AuthContextType = {
     ...authState,
     login,
-    logout
+    logout,
+    updateUserProfile,
+    changeUserPassword
   };
 
   return (

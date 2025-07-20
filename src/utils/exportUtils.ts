@@ -25,9 +25,9 @@ export class UtilidadesExportacion {
       XLSX.utils.book_append_sheet(libro, hoja, nombreHoja);
       XLSX.writeFile(libro, `${nombreArchivo}.xlsx`);
 
-      console.log(`✅ Archivo Excel exportado: ${nombreArchivo}.xlsx`);
+      console.log(`Archivo Excel exportado: ${nombreArchivo}.xlsx`);
     } catch (error) {
-      console.error('❌ Error al exportar a Excel:', error);
+      console.error('Error al exportar a Excel:', error);
       alert('Hubo un error al exportar a Excel. Consulte la consola para más detalles.');
       throw new Error('Error al exportar a Excel');
     }
@@ -82,9 +82,9 @@ export class UtilidadesExportacion {
       });
 
       doc.save(`${nombreArchivo}.pdf`);
-      console.log(`✅ Archivo PDF exportado: ${nombreArchivo}.pdf`);
+      console.log(`Archivo PDF exportado: ${nombreArchivo}.pdf`);
     } catch (error) {
-      console.error('❌ Error al exportar a PDF:', error);
+      console.error('Error al exportar a PDF:', error);
       alert('Hubo un error al exportar a PDF. Consulte la consola para más detalles.');
       throw new Error('Error al exportar a PDF');
     }

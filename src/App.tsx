@@ -5,16 +5,13 @@ import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import WindowManager from './components/GestorVentanas';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-//faltaba esto 
 import 'bootstrap/dist/css/bootstrap.min.css'; 
-
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-
-   // dataService.initializeDefaultData();
+    // dataService.initializeDefaultData(); // Comentado, asumo que es intencional
   }, []);
 
   if (!isAuthenticated) {
@@ -38,6 +35,8 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
+    // AuthProvider envuelve a WindowProvider y AppContent,
+    // asegurando que useAuth esté disponible para AppContent.
     <AuthProvider>
       <WindowProvider>
         <AppContent />

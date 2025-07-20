@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { dataService } from '../../services/dataService'; // Asegúrate de que este servicio maneje promesas
+// Importaciones de módulos y utilidades
 import { Producto } from '../../domain/Producto';
 import { generarId, formatearMoneda, formatearFecha, validarRequerido, validarNumero } from '../../utils';
 import { Package, Plus, Edit, Trash2, Search, AlertTriangle, FileText, FileSpreadsheet } from 'lucide-react';
 import { UtilidadesExportacion } from '../../utils/exportUtils';
+import { productService } from '../../services/servicioProducto';
+import ProductoForm from '../Formularios/FormularioProductos';
 
 const VentanaProductos: React.FC = () => {
+  // Estados del componente
   const [productos, setProductos] = useState<Producto[]>([]);
   const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -21,36 +24,30 @@ const VentanaProductos: React.FC = () => {
   });
   const [errores, setErrores] = useState<{[key: string]: string}>({});
 
+  // Efecto para cargar productos al iniciar
   useEffect(() => {
-    // Al cargar el componente, cargamos los productos de forma asíncrona
     cargarProductos();
   }, []);
 
+  // Efecto para filtrar productos cuando cambian los productos o el término de búsqueda
   useEffect(() => {
-    // Este efecto depende de `productos` y `terminoBusqueda`
-    // Aseguramos que `productos` sea un array antes de intentar filtrar
     filtrarProductos();
   }, [productos, terminoBusqueda]);
 
-  // Hacemos que cargarProductos sea asíncrono
+  // Carga los productos de forma asíncrona
   const cargarProductos = async () => {
     try {
-      // Usamos await para esperar que la promesa de dataService.getProducts() se resuelva
-      const productosCargados = await dataService.getProducts();
-      setProductos(productosCargados || []); // Aseguramos que sea un array vacío si la promesa devuelve null/undefined
+      const productosCargados = await productService.getProducts();
+      setProductos(productosCargados || []);
     } catch (error) {
       console.error("Error al cargar productos:", error);
-      setProductos([]); // En caso de error, establecer a un array vacío
-      // Opcional: mostrar un mensaje de error al usuario
-      alert('Hubo un error al cargar los productos. Inténtelo de nuevo.');
+      setProductos([]);
     }
   };
 
+  // Filtra los productos según el término de búsqueda
   const filtrarProductos = () => {
-    // Esta función se ejecuta después de que `productos` se ha actualizado
-    // gracias a `cargarProductos`. Ya debería ser un array.
     const productosBase = Array.isArray(productos) ? productos : [];
-
     if (!terminoBusqueda) {
       setProductosFiltrados(productosBase);
       return;
@@ -63,6 +60,7 @@ const VentanaProductos: React.FC = () => {
     setProductosFiltrados(filtrados);
   };
 
+  // Resetea el formulario a sus valores iniciales
   const resetearFormulario = () => {
     setDatosFormulario({
       nombre: '',
@@ -76,6 +74,7 @@ const VentanaProductos: React.FC = () => {
     setProductoEditando(null);
   };
 
+  // Valida los campos del formulario
   const validarFormulario = (): boolean => {
     const nuevosErrores: {[key: string]: string} = {};
     if (!validarRequerido(datosFormulario.nombre)) {
@@ -107,7 +106,7 @@ const VentanaProductos: React.FC = () => {
     return Object.keys(nuevosErrores).length === 0;
   };
 
-  // Manejador de envío de formulario (ahora asíncrono si saveProduct es asíncrono)
+  // Maneja el envío del formulario para guardar o actualizar un producto
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validarFormulario()) return;
@@ -126,18 +125,17 @@ const VentanaProductos: React.FC = () => {
     };
 
     try {
-      // Si saveProduct es asíncrono, usa await
-      await dataService.saveProduct(datosProducto);
-      cargarProductos(); // Recargar productos después de guardar
+      await productService.guardarProducto(datosProducto);
+      cargarProductos();
       setMostrarFormulario(false);
       resetearFormulario();
-      alert('Producto guardado correctamente.');
+      console.log('Producto guardado correctamente.');
     } catch (error) {
       console.error("Error al guardar producto:", error);
-      alert('Hubo un error al guardar el producto. Verifique el SKU y los datos.');
     }
   };
 
+  // Prepara el formulario para editar un producto existente
   const manejarEdicion = (producto: Producto) => {
     setProductoEditando(producto);
     setDatosFormulario({
@@ -151,20 +149,21 @@ const VentanaProductos: React.FC = () => {
     setMostrarFormulario(true);
   };
 
-  // Manejador de eliminación (ahora asíncrono si deleteProduct es asíncrono)
+  // Maneja la eliminación de un producto
   const manejarEliminacion = async (producto: Producto) => {
-    if (window.confirm(`¿Estás seguro de eliminar el producto "${producto.name}"?`)) {
+    const confirmDelete = window.confirm(`¿Estás seguro de eliminar el producto "${producto.name}"?`);
+    if (confirmDelete) {
       try {
-        await dataService.deleteProduct(producto.id);
-        cargarProductos(); // Recargar productos después de eliminar
-        alert('Producto eliminado correctamente.');
+        await productService.eliminarProducto(producto.id);
+        cargarProductos();
+        console.log('Producto eliminado correctamente.');
       } catch (error) {
         console.error("Error al eliminar producto:", error);
-        alert('Hubo un error al eliminar el producto.');
       }
     }
   };
 
+  // Actualiza el estado del formulario al cambiar los inputs
   const manejarCambioInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setDatosFormulario(prev => ({ ...prev, [name]: value }));
@@ -173,165 +172,47 @@ const VentanaProductos: React.FC = () => {
     }
   };
 
+  // Exporta los productos filtrados a Excel
   const handleExportarExcel = () => {
     try {
       UtilidadesExportacion.exportarReporteProductos(productosFiltrados, 'excel');
-      alert('Reporte de productos exportado a Excel correctamente.');
+      console.log('Reporte de productos exportado a Excel correctamente.');
     } catch (error) {
       console.error('Error al exportar productos a Excel:', error);
-      alert('Hubo un error al exportar el reporte a Excel.');
     }
   };
 
+  // Exporta los productos filtrados a PDF
   const handleExportarPDF = () => {
     try {
       UtilidadesExportacion.exportarReporteProductos(productosFiltrados, 'pdf');
-      alert('Reporte de productos exportado a PDF correctamente.');
+      console.log('Reporte de productos exportado a PDF correctamente.');
     } catch (error) {
       console.error('Error al exportar productos a PDF:', error);
-      alert('Hubo un error al exportar el reporte a PDF.');
     }
   };
 
+  // Cancela la operación del formulario y lo cierra
+  const handleCancelForm = () => {
+    setMostrarFormulario(false);
+    resetearFormulario();
+  };
+
+  // Renderiza el formulario de producto si mostrarFormulario es true
   if (mostrarFormulario) {
     return (
-      <div className="fade-in">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>
-            <Package className="me-2" />
-            {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
-          </h4>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setMostrarFormulario(false);
-              resetearFormulario();
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.nombre ? 'is-invalid' : ''}`}
-                  id="nombre"
-                  name="nombre"
-                  placeholder="Nombre del producto"
-                  value={datosFormulario.nombre}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="nombre">Nombre del producto</label>
-                {errores.nombre && <div className="invalid-feedback">{errores.nombre}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.sku ? 'is-invalid' : ''}`}
-                  id="sku"
-                  name="sku"
-                  placeholder="SKU"
-                  value={datosFormulario.sku}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="sku">SKU</label>
-                {errores.sku && <div className="invalid-feedback">{errores.sku}</div>}
-              </div>
-            </div>
-          </div>
-
-          <div className="form-floating mb-3">
-            <textarea
-              className={`form-control ${errores.descripcion ? 'is-invalid' : ''}`}
-              id="descripcion"
-              name="descripcion"
-              placeholder="Descripción"
-              style={{ height: '100px' }}
-              value={datosFormulario.descripcion}
-              onChange={manejarCambioInput}
-            />
-            <label htmlFor="descripcion">Descripción</label>
-            {errores.descripcion && <div className="invalid-feedback">{errores.descripcion}</div>}
-          </div>
-
-          <div className="row">
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="number"
-                  step="0.01"
-                  className={`form-control ${errores.precio ? 'is-invalid' : ''}`}
-                  id="precio"
-                  name="precio"
-                  placeholder="Precio"
-                  value={datosFormulario.precio}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="precio">Precio</label>
-                {errores.precio && <div className="invalid-feedback">{errores.precio}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="number"
-                  className={`form-control ${errores.stock ? 'is-invalid' : ''}`}
-                  id="stock"
-                  name="stock"
-                  placeholder="Stock"
-                  value={datosFormulario.stock}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="stock">Stock</label>
-                {errores.stock && <div className="invalid-feedback">{errores.stock}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.categoria ? 'is-invalid' : ''}`}
-                  id="categoria"
-                  name="categoria"
-                  placeholder="Categoría"
-                  value={datosFormulario.categoria}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="categoria">Categoría</label>
-                {errores.categoria && <div className="invalid-feedback">{errores.categoria}</div>}
-              </div>
-            </div>
-          </div>
-
-          <div className="d-flex gap-2">
-            <button type="submit" className="btn btn-gradient">
-              {productoEditando ? 'Actualizar' : 'Guardar'} Producto
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setMostrarFormulario(false);
-                resetearFormulario();
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
+      <ProductoForm
+        datosFormulario={datosFormulario}
+        errores={errores}
+        productoEditando={productoEditando}
+        manejarCambioInput={manejarCambioInput}
+        handleSubmit={handleSubmit}
+        onCancel={handleCancelForm}
+      />
     );
   }
 
+  // Renderiza la tabla de gestión de productos
   return (
     <div className="fade-in">
       <div className="d-flex justify-content-between align-items-center mb-4">

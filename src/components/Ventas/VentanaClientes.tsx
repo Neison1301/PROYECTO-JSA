@@ -1,11 +1,11 @@
-// src/components/Ventas/VentanaClientes.tsx
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { dataService } from '../../services/dataService';
-import { Cliente } from '../../domain/Cliente';
+// import { dataService } from '../../services/dataService'; // No es necesario si solo usas clientService
+import { Cliente } from '../../domain/Cliente'; // Asegúrate de que la ruta sea correcta
 // Importaciones de utilidades y iconos
-import { formatearFecha, validarRequerido, validarEmail } from '../../utils';
-import { Users, Plus, Edit, Trash2, Search, Mail, Phone, MapPin, XCircle } from 'lucide-react';
+import { formatearFecha, validarRequerido, validarEmail } from '../../utils'; // Asegúrate de que la ruta sea correcta
+import { Users, Plus, Edit, Trash2, Search, Mail, Phone, MapPin } from 'lucide-react';
+import { clientService } from '../../services/servicioCliente'; // Asegúrate de que la ruta sea correcta
+import ClienteForm from '../Formularios/FormularioClientes'; // Importa el nuevo componente del formulario
 
 const VentanaClientes: React.FC = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -28,14 +28,14 @@ const VentanaClientes: React.FC = () => {
   const cargarClientes = useCallback(async () => {
     setCargando(true); // Iniciar carga
     try {
-      const clientesCargados = await dataService.getClients();
+      const clientesCargados = await clientService.getClients();
       // ¡Asegurarse de que el resultado sea un array antes de establecerlo!
       if (Array.isArray(clientesCargados)) {
         setClientes(clientesCargados);
         setErrorGeneral(null); // Limpiar errores si la carga fue exitosa
       } else {
         // Esto debería prevenir el TypeError si la API devuelve algo inesperado
-        console.warn("dataService.getClients no devolvió un array:", clientesCargados);
+        console.warn("clientService.getClients no devolvió un array:", clientesCargados);
         setClientes([]); // Asegura que `clientes` siempre sea un array
         setErrorGeneral("Los datos de clientes recibidos no tienen el formato esperado.");
       }
@@ -109,7 +109,7 @@ const VentanaClientes: React.FC = () => {
       // Usar `clientes` del estado para la validación si está ya cargado,
       // o cargar de nuevo si no se tiene certeza.
       // Para consistencia con tu código anterior, mantenemos la carga aquí.
-      const allClients = await dataService.getClients(); 
+      const allClients = await clientService.getClients(); 
       if (!Array.isArray(allClients)) {
           throw new Error("La API no devolvió un array de clientes para la validación.");
       }
@@ -147,7 +147,7 @@ const VentanaClientes: React.FC = () => {
     }
 
     const clienteASalvar: Cliente = {
-      id: clienteEditando?.id || '',
+      id: clienteEditando?.id || '', // Si es edición, usa el ID existente; de lo contrario, se asignará en el backend
       name: datosFormulario.name,
       email: datosFormulario.email,
       phone: datosFormulario.phone,
@@ -160,10 +160,11 @@ const VentanaClientes: React.FC = () => {
     };
 
     try {
-      await dataService.saveClient(clienteASalvar);
-      await cargarClientes();
+      await clientService.guardarCliente(clienteASalvar);
+      await cargarClientes(); // Recargar clientes después de guardar
       setMostrarFormulario(false);
       resetearFormulario();
+      console.log('Cliente guardado correctamente.'); // Log para depuración
     } catch (error) {
       console.error("Error al guardar el cliente:", error);
       setErrorGeneral("Error al guardar el cliente. Por favor, inténtalo de nuevo.");
@@ -186,10 +187,13 @@ const VentanaClientes: React.FC = () => {
   };
 
   const manejarEliminacion = async (cliente: Cliente) => {
-    if (window.confirm(`¿Estás seguro de eliminar el cliente "${cliente.name}"? Esta acción es irreversible.`)) {
+    // Reemplazar window.confirm con un modal personalizado o log
+    const confirmDelete = window.confirm(`¿Estás seguro de eliminar el cliente "${cliente.name}"? Esta acción es irreversible.`);
+    if (confirmDelete) {
       try {
-        await dataService.deleteClient(cliente.id);
-        await cargarClientes();
+        await clientService.eliminarcliente(cliente.id);
+        await cargarClientes(); // Recargar clientes después de eliminar
+        console.log('Cliente eliminado correctamente.'); // Log para depuración
       } catch (error) {
         console.error("Error al eliminar el cliente:", error);
         setErrorGeneral("Error al eliminar el cliente. Por favor, inténtalo de nuevo.");
@@ -207,155 +211,24 @@ const VentanaClientes: React.FC = () => {
     setErrorGeneral(null);
   };
 
+  // Función para manejar la cancelación del formulario
+  const handleCancelForm = () => {
+    setMostrarFormulario(false);
+    resetearFormulario();
+  };
+
   // Renderizado condicional: si se muestra el formulario
   if (mostrarFormulario) {
     return (
-      <div className="fade-in">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>
-            <Users className="me-2" />
-            {clienteEditando ? 'Editar Cliente' : 'Nuevo Cliente'}
-          </h4>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              setMostrarFormulario(false);
-              resetearFormulario();
-            }}
-          >
-            <XCircle size={18} className="me-1" />
-            Cancelar
-          </button>
-        </div>
-
-        <form onSubmit={manejarEnvio}>
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.name ? 'is-invalid' : ''}`}
-                  id="name"
-                  name="name"
-                  placeholder="Nombre completo"
-                  value={datosFormulario.name}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="name">Nombre completo</label>
-                {errores.name && <div className="invalid-feedback">{errores.name}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="email"
-                  className={`form-control ${errores.email ? 'is-invalid' : ''}`}
-                  id="email"
-                  name="email"
-                  placeholder="Correo"
-                  value={datosFormulario.email}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="email">Correo</label>
-                {errores.email && <div className="invalid-feedback">{errores.email}</div>}
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="tel"
-                  className={`form-control ${errores.phone ? 'is-invalid' : ''}`}
-                  id="phone"
-                  name="phone"
-                  placeholder="Teléfono"
-                  value={datosFormulario.phone}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="phone">Teléfono</label>
-                {errores.phone && <div className="invalid-feedback">{errores.phone}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.taxId ? 'is-invalid' : ''}`}
-                  id="taxId"
-                  name="taxId"
-                  placeholder="RFC/ID Fiscal"
-                  value={datosFormulario.taxId}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="taxId">RFC/ID Fiscal</label>
-                {errores.taxId && <div className="invalid-feedback">{errores.taxId}</div>}
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
-            <div className="col-md-8">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.address ? 'is-invalid' : ''}`}
-                  id="address"
-                  name="address"
-                  placeholder="Dirección"
-                  value={datosFormulario.address}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="address">Dirección</label>
-                {errores.address && <div className="invalid-feedback">{errores.address}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-4">
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className={`form-control ${errores.city ? 'is-invalid' : ''}`}
-                  id="city"
-                  name="city"
-                  placeholder="Ciudad"
-                  value={datosFormulario.city}
-                  onChange={manejarCambioInput}
-                />
-                <label htmlFor="city">Ciudad</label>
-                {errores.city && <div className="invalid-feedback">{errores.city}</div>}
-              </div>
-            </div>
-          </div>
-
-          {errorGeneral && (
-            <div className="alert alert-danger mb-3" role="alert">
-              {errorGeneral}
-            </div>
-          )}
-
-          <div className="d-flex gap-2">
-            <button type="submit" className="btn btn-gradient">
-              {clienteEditando ? 'Actualizar' : 'Guardar'} Cliente
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setMostrarFormulario(false);
-                resetearFormulario();
-              }}
-            >
-              <XCircle size={18} className="me-1" />
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
+      <ClienteForm
+        datosFormulario={datosFormulario}
+        errores={errores}
+        errorGeneral={errorGeneral}
+        clienteEditando={clienteEditando}
+        manejarCambioInput={manejarCambioInput}
+        manejarEnvio={manejarEnvio}
+        onCancel={handleCancelForm}
+      />
     );
   }
 

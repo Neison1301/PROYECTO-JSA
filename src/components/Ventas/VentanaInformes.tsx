@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { dataService } from '../../services/dataService';
 import { UtilidadesExportacion } from '../../utils/exportUtils';
 import { formatearMoneda, formatearFecha } from '../../utils'; // Importaciones corregidas
 import { BarChart3, TrendingUp, Calendar, DollarSign, Package, Users, ShoppingCart, AlertTriangle, Download, FileSpreadsheet, FileText, FileDown } from 'lucide-react';
-import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { productService } from '../../services/servicioProducto';
+import { clientService } from '../../services/servicioCliente';
+import { saleService } from '../../services/servicioVenta';
+import { boletaService } from '../../services/servicioBoleta';
 
 // Extender el tipo de jsPDF para incluir autoTable
 declare module 'jspdf' {
@@ -70,9 +72,9 @@ const ReportsWindow: React.FC = () => {
     try {
       // Obtenemos los datos de forma asíncrona, usando Promise.all para eficiencia
       const [products, clients, sales] = await Promise.all([
-        dataService.getProducts(),
-        dataService.getClients(),
-        dataService.getSales()
+        productService.getProducts(),
+        clientService.getClients(),
+        saleService.getSales()
       ]);
 
       // Estadísticas básicas
@@ -156,9 +158,9 @@ const ReportsWindow: React.FC = () => {
     try {
       // Obtenemos los datos de forma asíncrona para la exportación
       const [products, clients, sales] = await Promise.all([
-        dataService.getProducts(),
-        dataService.getClients(),
-        dataService.getSales()
+         productService.getProducts(),
+        clientService.getClients(),
+        saleService.getSales()
       ]);
 
       switch (type) {
@@ -195,8 +197,9 @@ const ReportsWindow: React.FC = () => {
   const handleGenerateReceipt = async (sale: any) => {
     try {
       // Necesitamos cargar los datos de productos y clientes para la boleta
-      const products = await dataService.getProducts();
-      const clients = await dataService.getClients();
+      const products = await productService.getProducts();
+      const clients = await clientService.getClients();
+
         //  Buscar el cliente específico de la venta dentro del array 'allClients'
       const clientForSale = clients.find(c => c.id === sale.clientId);
 
@@ -204,7 +207,7 @@ const ReportsWindow: React.FC = () => {
         alert('No se pudo encontrar la información del cliente para esta venta.');
         return;
       }
-      await UtilidadesExportacion.generarBoletaVentaPDF(sale, products, clientForSale);
+      await boletaService.generarBoletaPDF(sale, clientForSale, products);
       alert(`Boleta para venta #${sale.id} generada exitosamente.`);
     } catch (error) {
       console.error('Error al generar la boleta desde reportes:', error);

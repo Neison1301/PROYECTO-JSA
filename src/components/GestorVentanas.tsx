@@ -32,7 +32,10 @@ const GestorVentanas: React.FC = () => {
         case "sales": return <SalesWindow />;
         case "reports": return <ReportsWindow />;
         case "settings": return <SettingsWindow />;
-        case "addUserForm": return (<FormularioUsuario onUserSaved={() => {}} windowId={currentWindowId} />);
+        case "addUserForm": return (<FormularioUsuario
+              onUserSaved={() => closeWindow(currentWindowId)} // Cierra la ventana cuando el usuario se guarda
+              windowId={currentWindowId} // Pasa el ID de la ventana para que el formulario sepa cuál es
+            />);
         default: return <div>Componente '{componente}' no encontrado.</div>;
       }
     },

@@ -1,10 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { dataService } from '../../services/dataService';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User } from '../../domain/Usuario';
 import { generarId, formatearFecha, validarRequerido, validarEmail } from '../../utils';
-import { UserCheck, Plus, Edit, Trash2, Search, Mail, Shield, Eye, EyeOff } from 'lucide-react';
+import { UserCheck, Plus, Edit, Trash2, Search, Mail, Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { userService } from '../../services/servicioUsuario';
+import { useWindows } from '../../contexts/WindowContext';
+import UsuarioForm from '../Formularios/FormularioUsuario';
 
-const VentanaUsuario: React.FC = () => {
+// Interfaz de props para VentanaUsuario
+interface VentanaUsuarioProps {
+  onUserSaved: () => void;
+  windowId: string;
+}
+
+// Componente de Modal de Confirmación simple
+const ConfirmationModal: React.FC<{
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ message, onConfirm, onCancel }) => {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content-custom">
+        <p>{message}</p>
+        <div className="modal-actions">
+          <button className="btn btn-danger" onClick={onConfirm}>Confirmar</button>
+          <button className="btn btn-secondary" onClick={onCancel}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const VentanaUsuario: React.FC<VentanaUsuarioProps> = ({ onUserSaved, windowId }) => {
+  const { closeWindow } = useWindows();
+
+  // Estados del componente
   const [employees, setEmployees] = useState<User[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -15,43 +45,41 @@ const VentanaUsuario: React.FC = () => {
     username: '',
     email: '',
     password: '',
-    // fullName y position no son parte de la clase User, por lo que no se incluyen aquí para la persistencia.
-    // Si necesitas estos campos en el formulario, se manejarán localmente y no se guardarán con el objeto User.
-    role: 'empleado' as 'admin' | 'empleado' // El tipo de rol de la clase User
+    role: 'empleado' as 'admin' | 'empleado'
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
 
-  // Efecto para cargar empleados al montar el componente
+  // Efecto para cargar empleados al montar
   useEffect(() => {
     loadEmployees();
   }, []);
 
-  // Efecto para filtrar empleados cuando la lista de empleados o el término de búsqueda cambian
+  // Efecto para filtrar empleados al cambiar la lista o el término de búsqueda
   useEffect(() => {
     filterEmployees();
   }, [employees, searchTerm]);
 
-  /**
-   * Carga la lista de empleados desde el servicio de datos.
-   * Filtra los usuarios para incluir solo aquellos que no son 'admin'.
-   */
+  // Carga la lista de empleados
   const loadEmployees = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
     try {
-      const allUsers = await dataService.getUsers();
-      // Filtra solo empleados y auxiliares (si 'auxiliar' fuera un rol en User, se incluiría aquí).
-      // Dada la definición de User, solo 'admin' y 'empleado' son roles válidos.
-      // Si 'auxiliar' se usa en el formulario, se mapea a 'empleado' al guardar.
+      const allUsers = await userService.getUsers();
       const employeeUsers = allUsers.filter(user => user.role !== 'admin');
       setEmployees(employeeUsers);
     } catch (error) {
       console.error("Error al cargar empleados:", error);
-      // Aquí podrías establecer un estado de error para mostrar un mensaje al usuario
+      setErrorMessage("Error al cargar los empleados. Inténtalo de nuevo.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  /**
-   * Filtra la lista de empleados basándose en el término de búsqueda.
-   */
+  // Filtra la lista de empleados
   const filterEmployees = () => {
     if (!searchTerm) {
       setFilteredEmployees(employees);
@@ -62,14 +90,11 @@ const VentanaUsuario: React.FC = () => {
       employee.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.role.toLowerCase().includes(searchTerm.toLowerCase())
-      // No se busca por fullName o position ya que no son propiedades del objeto User
     );
     setFilteredEmployees(filtered);
   };
 
-  /**
-   * Resetea el formulario a sus valores iniciales y limpia errores.
-   */
+  // Resetea el formulario
   const resetForm = () => {
     setFormData({
       username: '',
@@ -82,11 +107,7 @@ const VentanaUsuario: React.FC = () => {
     setShowPassword(false);
   };
 
-  /**
-   * Valida los campos del formulario antes de enviar.
-   * Verifica campos requeridos, formato de email y si el usuario/email ya existen.
-   * @returns {Promise<boolean>} True si el formulario es válido, false en caso contrario.
-   */
+  // Valida los campos del formulario
   const validateForm = async (): Promise<boolean> => {
     const newErrors: {[key: string]: string} = {};
 
@@ -100,7 +121,6 @@ const VentanaUsuario: React.FC = () => {
       newErrors.email = 'El email no es válido';
     }
 
-    // La contraseña es requerida solo para nuevos empleados
     if (!editingEmployee && !validarRequerido(formData.password)) {
       newErrors.password = 'La contraseña es requerida';
     }
@@ -109,22 +129,15 @@ const VentanaUsuario: React.FC = () => {
       newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
 
-    // Se asume que fullName y position ya no son parte de la validación si no están en User.
-    // Si los campos de fullName y position están en el formulario, pero no en el modelo User,
-    // y aún así quieres validarlos, deberías agregarlos al estado formData y aquí a la validación.
-    // Por el código actual, esos campos no están en el formulario de edición.
-
-    // Verificar si el email ya existe
-    const allUsers = await dataService.getUsers(); // Asegúrate de esperar la obtención de usuarios
-    const existingEmail = allUsers.find(u => 
+    const allUsers = await userService.getUsers();
+    const existingEmail = allUsers.find(u =>
       u.email === formData.email && (!editingEmployee || u.id !== editingEmployee.id)
     );
     if (existingEmail) {
       newErrors.email = 'Este email ya está registrado';
     }
 
-    // Verificar si el nombre de usuario ya existe
-    const existingUsername = allUsers.find(u => 
+    const existingUsername = allUsers.find(u =>
       u.username === formData.username && (!editingEmployee || u.id !== editingEmployee.id)
     );
     if (existingUsername) {
@@ -135,310 +148,164 @@ const VentanaUsuario: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  /**
-   * Maneja el envío del formulario para crear o actualizar un empleado.
-   * @param {React.FormEvent} e El evento del formulario.
-   */
-  const handleSubmit = async (e: React.FormEvent) => { // Marcado como async
+  // Maneja el envío del formulario
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Espera a que la validación termine
+    setErrorMessage(null);
+
     if (!(await validateForm())) return;
 
-    // Mapea el rol del formulario al tipo de rol de la clase User.
+    setIsLoading(true);
     const roleToSave = formData.role as 'admin' | 'empleado';
 
     let employeeData: User;
 
     if (editingEmployee) {
-      // Lógica para ACTUALIZAR un empleado existente
       employeeData = {
-        ...editingEmployee, // Copia las propiedades existentes del empleado
+        ...editingEmployee,
         username: formData.username,
         email: formData.email,
-        password: formData.password || editingEmployee.password || '', // Mantiene la contraseña si no se cambia
+        password: formData.password || editingEmployee.password || '',
         role: roleToSave,
-        // createdAt y isActive permanecen del editingEmployee
       };
     } else {
-      // Lógica para CREAR un nuevo empleado
-      // IMPORTANTE: NO se incluye el 'id' aquí. json-server lo generará automáticamente.
-      // Si quieres usar generarId() para un ID generado en el cliente y persistirlo,
-      // necesitarías que json-server no genere IDs automáticamente (lo cual no es su comportamiento por defecto)
-      // o guardar tu ID generado en otra propiedad (ej. 'clientId').
       employeeData = {
         username: formData.username,
         email: formData.email,
-        password: formData.password, // La contraseña es requerida para un nuevo usuario
+        password: formData.password,
         role: roleToSave,
         createdAt: new Date(),
         isActive: true
-      } as User; // Se castea a User para satisfacer el tipo, aunque 'id' no esté explícitamente aquí.
+      } as User;
     }
 
     try {
-      // Espera a que la operación de guardar termine
-      await dataService.saveUser(employeeData);
+      await userService.guardarUsuario(employeeData);
       console.log("Usuario guardado/actualizado con éxito. Recargando...");
-      // Espera a que la recarga de empleados termine para asegurar la actualización de la UI
-      await loadEmployees(); 
+      await loadEmployees();
       setShowForm(false);
       resetForm();
+      onUserSaved();
     } catch (error) {
       console.error("Error al guardar/actualizar usuario:", error);
-      // Podrías mostrar un mensaje de error al usuario aquí
+      setErrorMessage("Error al guardar el usuario. Inténtalo de nuevo.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  /**
-   * Prepara el formulario para editar un empleado existente.
-   * @param {User} employee El objeto empleado a editar.
-   */
+  // Prepara el formulario para editar
   const handleEdit = (employee: User) => {
     setEditingEmployee(employee);
     setFormData({
       username: employee.username,
       email: employee.email,
-      password: '', // Siempre se deja vacío por seguridad
-      role: employee.role // Asigna el rol existente
+      password: '',
+      role: employee.role
     });
     setShowForm(true);
   };
 
-  /**
-   * Maneja la eliminación de un empleado.
-   * @param {User} employee El objeto empleado a eliminar.
-   */
-  const handleDelete = async (employee: User) => { // Marcado como async
-    // Corregido: Uso de backticks para la template literal en window.confirm
-    if (window.confirm(`¿Estás seguro de eliminar al empleado "${employee.username}"?`)) {
-      try {
-        // Espera a que la operación de eliminación termine
-        await dataService.deleteUser(employee.id);
-        console.log("Usuario eliminado con éxito. Recargando...");
-        // Espera a que la recarga de empleados termine para asegurar la actualización de la UI
-        await loadEmployees();
-      } catch (error) {
-        console.error("Error al eliminar usuario:", error);
-        // Podrías mostrar un mensaje de error al usuario aquí
-      }
+  // Abre el modal de confirmación para eliminar
+  const confirmDelete = (employee: User) => {
+    setEmployeeToDelete(employee);
+    setShowConfirmModal(true);
+  };
+
+  // Maneja la eliminación confirmada
+  const handleDeleteConfirmed = async () => {
+    if (!employeeToDelete) return;
+
+    setIsLoading(true);
+    setErrorMessage(null);
+    setShowConfirmModal(false);
+
+    try {
+      await userService.eliminarUsuario(employeeToDelete.id);
+      console.log("Usuario eliminado con éxito. Recargando...");
+      await loadEmployees();
+    } catch (error) {
+      console.error("Error al eliminar usuario:", error);
+      setErrorMessage("Error al eliminar el usuario. Inténtalo de nuevo.");
+    } finally {
+      setIsLoading(false);
+      setEmployeeToDelete(null);
     }
   };
 
-  /**
-   * Maneja los cambios en los campos del formulario y actualiza el estado.
-   * @param {React.ChangeEvent<HTMLInputElement | HTMLSelectElement>} e El evento de cambio.
-   */
+  // Cancela la eliminación
+  const handleDeleteCancelled = () => {
+    setShowConfirmModal(false);
+    setEmployeeToDelete(null);
+  };
+
+  // Maneja cambios en los inputs del formulario
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value as any })); // 'as any' para permitir 'auxiliar' si el select lo tiene
-    
-    // Limpia el error cuando el usuario comienza a escribir en el campo
+    setFormData(prev => ({ ...prev, [name]: value as any }));
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
-  /**
-   * Devuelve la clase CSS del badge según el rol del empleado.
-   * @param {string} role El rol del empleado.
-   * @returns {string} La clase CSS correspondiente.
-   */
+  // Devuelve la clase CSS del badge según el rol
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-danger';
       case 'empleado': return 'bg-primary';
-      // Si 'auxiliar' se usa en el formulario, pero no es un tipo en User,
-      // puedes mapearlo a un color aquí si es necesario para la visualización.
-      // case 'auxiliar': return 'bg-warning';
       default: return 'bg-secondary';
     }
   };
 
-  /**
-   * Devuelve el texto legible del rol.
-   * @param {string} role El rol del empleado.
-   * @returns {string} El texto del rol.
-   */
+  // Devuelve el texto legible del rol
   const getRoleText = (role: string) => {
     switch (role) {
       case 'admin': return 'Administrador';
       case 'empleado': return 'Empleado';
-      // Si 'auxiliar' se usa en el formulario, puedes definir su texto aquí.
-      // case 'auxiliar': return 'Auxiliar';
       default: return role;
     }
   };
 
-  // Renderiza el formulario de creación/edición de empleado
+  // Cancela el formulario
+  const handleCancelForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
+  // Renderiza el formulario o la tabla
   if (showForm) {
     return (
-      <div className="fade-in">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>
-            <UserCheck className="me-2" />
-            {editingEmployee ? 'Editar Empleado' : 'Nuevo Empleado'}
-          </h4>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setShowForm(false);
-              resetForm();
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          {/* Los campos fullName y position se han eliminado del formulario
-              ya que no son parte de la clase User en tu dominio.
-              Si necesitas capturarlos, deberías agregarlos al estado formData
-              y a la clase User para persistencia. */}
-
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                {/* Corregido: backticks para className */}
-                <input
-                  type="text"
-                  className={`form-control ${errors.username ? 'is-invalid' : ''}`}
-                  id="username"
-                  name="username"
-                  placeholder="Nombre de usuario"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                />
-                <label htmlFor="username">Nombre de usuario</label>
-                {errors.username && <div className="invalid-feedback">{errors.username}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                {/* Corregido: backticks para className */}
-                <input
-                  type="email"
-                  className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-                  id="email"
-                  name="email"
-                  placeholder="Email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                />
-                <label htmlFor="email">Email</label>
-                {errors.email && <div className="invalid-feedback">{errors.email}</div>}
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <div className="input-group">
-                  {/* Corregido: backticks para className */}
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-                    id="password"
-                    name="password"
-                    placeholder={editingEmployee ? "Nueva contraseña (opcional)" : "Contraseña"}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                  <label htmlFor="password">
-                    {editingEmployee ? "Nueva contraseña (opcional)" : "Contraseña"}
-                  </label>
-                </div>
-                {errors.password && <div className="invalid-feedback d-block">{errors.password}</div>}
-              </div>
-            </div>
-
-            <div className="col-md-6">
-              <div className="form-floating mb-3">
-                <select
-                  className="form-select"
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                >
-                  <option value="empleado">Empleado</option>
-                  {/* Si 'auxiliar' no es un rol en User, esta opción no se guardará como tal */}
-                  {/* <option value="auxiliar">Auxiliar</option> */}
-                  <option value="admin">Administrador</option>
-                </select>
-                <label htmlFor="role">Rol</label>
-              </div>
-            </div>
-          </div>
-
-          <div className="card mb-3">
-            <div className="card-body">
-              <h6 className="card-title">
-                <Shield className="me-2" size={18} />
-                Permisos según el rol
-              </h6>
-              <div className="row">
-                <div className="col-md-4">
-                  <strong>Administrador:</strong>
-                  <ul className="small text-muted">
-                    <li>Acceso completo</li>
-                    <li>Gestión de empleados</li>
-                    <li>Todos los reportes</li>
-                  </ul>
-                </div>
-                <div className="col-md-4">
-                  <strong>Empleado:</strong>
-                  <ul className="small text-muted">
-                    <li>Ventas y clientes</li>
-                    <li>Reportes limitados</li>
-                    <li>Generar boletas</li>
-                  </ul>
-                </div>
-                {/* Si 'auxiliar' es un rol que quieres describir, podrías añadirlo aquí */}
-                {/* <div className="col-md-4">
-                  <strong>Auxiliar:</strong>
-                  <ul className="small text-muted">
-                    <li>Ventas y clientes</li>
-                    <li>Reportes básicos</li>
-                    <li>Consulta únicamente</li>
-                  </ul>
-                </div> */}
-              </div>
-            </div>
-          </div>
-
-          <div className="d-flex gap-2">
-            <button type="submit" className="btn btn-gradient">
-              {editingEmployee ? 'Actualizar' : 'Crear'} Empleado
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setShowForm(false);
-                resetForm();
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
+      <UsuarioForm
+        formData={formData}
+        errors={errors}
+        errorMessage={errorMessage}
+        isLoading={isLoading}
+        editingEmployee={editingEmployee}
+        showPassword={showPassword}
+        setShowPassword={setShowPassword}
+        handleInputChange={handleInputChange}
+        handleSubmit={handleSubmit}
+        onCancel={handleCancelForm}
+      />
     );
   }
 
   // Renderiza la tabla de empleados
   return (
-    <div className="fade-in">
+    <div className="fade-in p-4">
+      {showConfirmModal && employeeToDelete && (
+        <ConfirmationModal
+          message={`¿Estás seguro de eliminar al empleado "${employeeToDelete.username}"?`}
+          onConfirm={handleDeleteConfirmed}
+          onCancel={handleDeleteCancelled}
+        />
+      )}
+      {errorMessage && (
+        <div className="alert alert-danger" role="alert">
+          {errorMessage}
+        </div>
+      )}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4>
           <UserCheck className="me-2" />
@@ -447,9 +314,10 @@ const VentanaUsuario: React.FC = () => {
         <button
           className="btn btn-gradient"
           onClick={() => {
-            resetForm(); // Asegura que el formulario esté limpio al abrir para nuevo empleado
+            resetForm();
             setShowForm(true);
           }}
+          disabled={isLoading}
         >
           <Plus size={18} className="me-2" />
           Nuevo Empleado
@@ -468,6 +336,7 @@ const VentanaUsuario: React.FC = () => {
               placeholder="Buscar empleados..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -480,27 +349,32 @@ const VentanaUsuario: React.FC = () => {
         </div>
       </div>
 
-      <div className="table-responsive">
-        <table className="table table-modern">
-          <thead>
-            {/* Corregido: Eliminado el espacio en blanco entre <tr> y <th> */}
-            <tr><th>Usuario</th><th>Contacto</th><th>Rol</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr>
-          </thead>
-          <tbody>
-            {filteredEmployees.length === 0 ? (
-              // Corregido: Eliminado el espacio en blanco entre <tr> y <td>
-              <tr><td colSpan={6} className="text-center py-4"> {/* colSpan ajustado a 6 */}
-                  <div className="text-muted">
-                    <UserCheck size={48} className="mb-2 opacity-50" />
-                    <p>No se encontraron empleados</p>
-                  </div>
-                </td></tr>
-            ) : (
-              filteredEmployees.map((employee) => (
-                // Corregido: Eliminado el espacio en blanco entre <tr> y <td>
+      {isLoading && (
+        <div className="d-flex justify-content-center align-items-center py-5">
+          <Loader2 className="animate-spin me-2" size={32} />
+          <span>Cargando empleados...</span>
+        </div>
+      )}
+
+      {!isLoading && filteredEmployees.length === 0 && (
+        <div className="text-center py-4">
+          <div className="text-muted">
+            <UserCheck size={48} className="mb-2 opacity-50" />
+            <p>No se encontraron empleados</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && filteredEmployees.length > 0 && (
+        <div className="table-responsive">
+          <table className="table table-modern">
+            <thead>
+              <tr><th>Usuario</th><th>Contacto</th><th>Rol</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+              {filteredEmployees.map((employee) => (
                 <tr key={employee.id}><td>
-                    {/* Se muestra employee.username ya que fullName no está en la clase User */}
-                    <strong>{employee.username}</strong> 
+                    <strong>{employee.username}</strong>
                   </td><td>
                     <div>
                       <div className="d-flex align-items-center mb-1">
@@ -509,12 +383,10 @@ const VentanaUsuario: React.FC = () => {
                       </div>
                     </div>
                   </td><td>
-                    {/* Corregido: backticks para className */}
                     <span className={`badge ${getRoleBadgeClass(employee.role)}`}>
                       {getRoleText(employee.role)}
                     </span>
                   </td><td>
-                    {/* Corregido: backticks para className */}
                     <span className={`status-badge ${employee.isActive ? 'status-active' : 'status-inactive'}`}>
                       {employee.isActive ? 'Activo' : 'Inactivo'}
                     </span>
@@ -526,23 +398,25 @@ const VentanaUsuario: React.FC = () => {
                         className="btn btn-sm btn-outline-primary"
                         onClick={() => handleEdit(employee)}
                         title="Editar"
+                        disabled={isLoading}
                       >
                         <Edit size={14} />
                       </button>
                       <button
                         className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDelete(employee)}
+                        onClick={() => confirmDelete(employee)}
                         title="Eliminar"
+                        disabled={isLoading}
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
                   </td></tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

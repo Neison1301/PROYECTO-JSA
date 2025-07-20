@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWindows } from '../../contexts/WindowContext';
-import { dataService } from '../../services/dataService'; // Asegúrate de que la ruta sea correcta
 import { Package, Users, ShoppingCart, TrendingUp, Calendar, Clock, UserPlus } from 'lucide-react';
-import { formatearMoneda } from '../../utils'; // Asegúrate de que la ruta sea correcta
+import { formatearMoneda } from '../../utils'; 
+import { productService } from '../../services/servicioProducto';
+import { saleService } from '../../services/servicioVenta';
+import { clientService } from '../../services/servicioCliente';
 
 const PanelPrincipal: React.FC = () => {
   const { user } = useAuth();
@@ -19,12 +21,12 @@ const PanelPrincipal: React.FC = () => {
 
   useEffect(() => {
     // Definimos una función asíncrona dentro del useEffect
-    const cargarEstadisticas = async () => { // ¡Marcado como async!
+    const cargarEstadisticas = async () => {
       try {
         // Obtenemos los datos, esperando a que las promesas se resuelvan
-        const productos = await dataService.getProducts();
-        const clientes = await dataService.getClients();
-        const ventas = await dataService.getSales();
+        const productos = await productService.getProducts();
+        const clientes = await clientService.getClients();
+        const ventas = await saleService.getSales();
 
         const hoy = new Date();
         const esteMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -61,7 +63,7 @@ const PanelPrincipal: React.FC = () => {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Lima' // Asegura la zona horaria correcta
+      timeZone: 'America/Lima'
     });
   };
 
@@ -160,8 +162,8 @@ const PanelPrincipal: React.FC = () => {
         </div>
       </div>
 
-      <div className="row mt-4"> {/* Añadido margen superior para separación */}
-        <div className="col-md-6 mb-4"> {/* Añadido margen inferior para separación en pantallas pequeñas */}
+      <div className="row mt-4"> 
+        <div className="col-md-6 mb-4">
           <div className="card h-100">
             <div className="card-header bg-primary text-white">
               <h6 className="card-title mb-0">
@@ -193,7 +195,7 @@ const PanelPrincipal: React.FC = () => {
           </div>
         </div>
 
-        <div className="col-md-6 mb-4"> {/* Añadido margen inferior */}
+        <div className="col-md-6 mb-4"> 
           <div className="card h-100">
             <div className="card-header bg-success text-white">
               <h6 className="card-title mb-0">
@@ -238,7 +240,7 @@ const PanelPrincipal: React.FC = () => {
                     className="btn btn-outline-danger"
                     onClick={() => manejarAccionRapida('agregarEmpleado')}
                   >
-                    <UserPlus className="me-2" size={18} /> {/* Icono más apropiado para "Agregar empleado" */}
+                    <UserPlus className="me-2" size={18} />
                     Agregar Empleado
                   </button>
                 )}
