@@ -53,9 +53,7 @@ npm install
 
 ```bash
 # En una terminal separada
-npm run server
-# o si tienes json-server instalado globalmente:
-json-server --watch db.json --port 3001
+json-server --watch db.json --port 3000
 ```
 
 ### 4. Iniciar el Proyecto
